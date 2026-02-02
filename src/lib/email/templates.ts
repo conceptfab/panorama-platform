@@ -5,7 +5,7 @@ export function getOTPEmailTemplate(
 ): string {
   const titleBase = `Kod logowania - CONCEPTFAB Pano v: ${version}`;
   const emailTitle = isAdmin ? `[Admin] ${titleBase}` : titleBase;
-  const productLineHtml = `Pano <span style="font-size: 10px;">v: ${version}</span>`;
+  const headerOneLine = `CONCEPTFAB Pano <span style="font-size: 0.85em; font-weight: 400; vertical-align: baseline;">v: ${version}</span>`;
   return `
 <!DOCTYPE html>
 <html lang="pl">
@@ -21,8 +21,8 @@ export function getOTPEmailTemplate(
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 480px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
           <tr>
             <td style="padding: 40px 32px;">
-              <h1 style="margin: 0 0 24px 0; font-size: 24px; font-weight: 600; color: #18181b; text-align: center;">
-                <span style="font-size: 70%;">CONCEPTFAB</span><br><span style="font-size: 91%;">${productLineHtml}</span>
+              <h1 style="margin: 0 0 16px 0; font-size: 22px; font-weight: 600; color: #18181b; text-align: center; line-height: 1.3; white-space: nowrap;">
+                ${headerOneLine}
               </h1>
 
               <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 24px; color: #52525b; text-align: center;">
@@ -65,7 +65,6 @@ export function getPendingRequestNotificationTemplate(
   requesterEmail: string,
   appUrl: string = ''
 ): string {
-  const displayUrl = appUrl || '[adres aplikacji]';
   return `
 <!DOCTYPE html>
 <html lang="pl">

@@ -4,7 +4,7 @@ TODO
 
 - pliki do zawsze webP
 - system zapisywania danych / statystyk uzytkowników JSON - pliki 24H
-
+- w screen shocie nazwa projektu
 - poprawki UI
 
 

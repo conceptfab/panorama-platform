@@ -25,12 +25,56 @@ export function PanoViewer({
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<unknown>(null);
   const panoramasRef = useRef<unknown[]>([]);
+  const rotationCycleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [loadProgress, setLoadProgress] = useState(0);
   const [scriptsLoaded, setScriptsLoaded] = useState(false);
   const [autoRotate, setAutoRotate] = useState(config.settings.autoRotate);
   const [threeLoaded, setThreeLoaded] = useState(false);
   const [, setCurrentPanoramaIndex] = useState(0);
+
+  /** Losowa prędkość 0.2–0.5, losowy kierunek. Zwraca czas pełnego obrotu w ms (Three.js autoRotateSpeed: 2 ≈ 30 s). */
+  const applyRandomAutoRotate = useCallback(
+    (viewer: { OrbitControls?: { autoRotateSpeed: number } }) => {
+      const speed =
+        (0.2 + Math.random() * 0.3) * (Math.random() >= 0.5 ? 1 : -1);
+      if (viewer?.OrbitControls) {
+        viewer.OrbitControls.autoRotateSpeed = speed;
+      }
+      return (60 / Math.abs(speed)) * 1000;
+    },
+    []
+  );
+
+  /** Po pełnym obrocie: losowa panorama, potem znowu losowa prędkość i kierunek. */
+  const scheduleNextRotation = useCallback(() => {
+    const viewer = viewerRef.current as {
+      setPanorama?: (p: unknown) => void;
+      OrbitControls?: { autoRotate: boolean; autoRotateSpeed: number };
+    };
+    const panoramas = panoramasRef.current;
+    if (
+      !viewer?.setPanorama ||
+      !viewer?.OrbitControls?.autoRotate ||
+      panoramas.length === 0
+    )
+      return;
+    const durationMs = applyRandomAutoRotate(viewer);
+    rotationCycleTimeoutRef.current = setTimeout(() => {
+      rotationCycleTimeoutRef.current = null;
+      const v = viewerRef.current as {
+        setPanorama?: (p: unknown) => void;
+        OrbitControls?: { autoRotate: boolean; autoRotateSpeed: number };
+      } | null;
+      if (v?.setPanorama && panoramas.length > 0) {
+        const randomIndex = Math.floor(Math.random() * panoramas.length);
+        v.setPanorama(panoramas[randomIndex]);
+        scheduleNextRotation();
+      }
+    }, durationMs);
+  }, [applyRandomAutoRotate]);
 
   const initViewer = useCallback(() => {
     if (!containerRef.current || !window.PANOLENS || !window.THREE) return;
@@ -153,11 +197,13 @@ export function PanoViewer({
       (viewer as any).setPanorama(panoramas[0]);
     }
 
-    // Start auto-rotate after delay
+    // Start auto-rotate after delay: losowa prędkość 0.2–0.5, losowy kierunek, po pełnym obrocie losowa panorama
     if (config.settings.autoRotate) {
       setTimeout(() => {
         if (viewer.OrbitControls) {
           viewer.enableAutoRate();
+          applyRandomAutoRotate(viewer);
+          scheduleNextRotation();
           setAutoRotate(true);
         }
       }, config.settings.autoRotateDelay);
@@ -167,7 +213,7 @@ export function PanoViewer({
     setTimeout(() => {
       setIsLoading(false);
     }, config.settings.splashDuration);
-  }, [config, basePath]);
+  }, [config, basePath, applyRandomAutoRotate, scheduleNextRotation]);
 
   useEffect(() => {
     if (scriptsLoaded) {
@@ -179,7 +225,10 @@ export function PanoViewer({
 
   useEffect(() => {
     return () => {
-      // Cleanup
+      if (rotationCycleTimeoutRef.current) {
+        clearTimeout(rotationCycleTimeoutRef.current);
+        rotationCycleTimeoutRef.current = null;
+      }
       if (viewerRef.current) {
         (viewerRef.current as { dispose?: () => void }).dispose?.();
       }
@@ -188,7 +237,7 @@ export function PanoViewer({
 
   const handleToggleAutoRotate = useCallback(() => {
     const viewer = viewerRef.current as {
-      OrbitControls?: { autoRotate: boolean };
+      OrbitControls?: { autoRotate: boolean; autoRotateSpeed: number };
       enableAutoRate?: () => void;
       disableAutoRate?: () => void;
     };
@@ -197,12 +246,18 @@ export function PanoViewer({
       viewer.OrbitControls.autoRotate = next;
       if (next) {
         viewer.enableAutoRate?.();
+        applyRandomAutoRotate(viewer);
+        scheduleNextRotation();
       } else {
+        if (rotationCycleTimeoutRef.current) {
+          clearTimeout(rotationCycleTimeoutRef.current);
+          rotationCycleTimeoutRef.current = null;
+        }
         viewer.disableAutoRate?.();
       }
       setAutoRotate(next);
     }
-  }, []);
+  }, [applyRandomAutoRotate, scheduleNextRotation]);
 
   const handleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
