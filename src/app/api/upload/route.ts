@@ -1,0 +1,129 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { writeFile, mkdir } from 'fs/promises';
+import path from 'path';
+import sharp from 'sharp';
+import { requireAdmin } from '@/lib/auth/session';
+import { getProjectById, getProjectConfig, updateProjectConfig } from '@/lib/db/projects';
+import { generateId } from '@/utils/helpers';
+import { Panorama } from '@/types';
+
+const UPLOADS_DIR = path.join(process.cwd(), 'uploads', 'projects');
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+const ALLOWED_TYPES = ['image/webp', 'image/jpeg', 'image/png'];
+
+export async function POST(request: NextRequest) {
+  try {
+    await requireAdmin();
+
+    const formData = await request.formData();
+    const projectId = formData.get('projectId') as string;
+    const files = formData.getAll('files') as File[];
+
+    if (!projectId) {
+      return NextResponse.json(
+        { error: 'Project ID is required' },
+        { status: 400 }
+      );
+    }
+
+    const project = await getProjectById(projectId);
+    if (!project) {
+      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+    }
+
+    if (files.length === 0) {
+      return NextResponse.json({ error: 'No files provided' }, { status: 400 });
+    }
+
+    const projectDir = path.join(UPLOADS_DIR, projectId);
+    const panoramasDir = path.join(projectDir, 'panoramas');
+    const thumbnailsDir = path.join(projectDir, 'thumbnails');
+
+    await mkdir(panoramasDir, { recursive: true });
+    await mkdir(thumbnailsDir, { recursive: true });
+
+    const config = await getProjectConfig(projectId);
+    if (!config) {
+      return NextResponse.json({ error: 'Config not found' }, { status: 404 });
+    }
+
+    const uploadedFiles: { name: string; panoramaId: string }[] = [];
+
+    for (const file of files) {
+      // Validate file
+      if (!ALLOWED_TYPES.includes(file.type)) {
+        continue; // Skip invalid types
+      }
+
+      if (file.size > MAX_FILE_SIZE) {
+        continue; // Skip too large files
+      }
+
+      const buffer = Buffer.from(await file.arrayBuffer());
+
+      // Get image metadata
+      const metadata = await sharp(buffer).metadata();
+      if (!metadata.width || !metadata.height) continue;
+
+      // Check aspect ratio (should be ~2:1 for equirectangular)
+      const aspectRatio = metadata.width / metadata.height;
+      if (aspectRatio < 1.8 || aspectRatio > 2.2) {
+        continue; // Skip non-equirectangular images
+      }
+
+      // Generate unique filename
+      const panoId = generateId('pano');
+      const ext = file.type === 'image/png' ? 'png' : 'webp';
+      const filename = `${panoId}.${ext}`;
+      const thumbFilename = `thumb_${panoId}.webp`;
+
+      // Save panorama (convert to webp if needed)
+      const panoramaPath = path.join(panoramasDir, filename);
+      if (file.type === 'image/webp') {
+        await writeFile(panoramaPath, buffer);
+      } else {
+        await sharp(buffer)
+          .webp({ quality: 85 })
+          .toFile(panoramaPath.replace(/\.[^.]+$/, '.webp'));
+      }
+
+      // Generate thumbnail (800x400)
+      const thumbnailPath = path.join(thumbnailsDir, thumbFilename);
+      await sharp(buffer)
+        .resize(800, 400, { fit: 'cover' })
+        .webp({ quality: 80 })
+        .toFile(thumbnailPath);
+
+      // Add to config
+      const newPanorama: Panorama = {
+        id: panoId,
+        name: file.name.replace(/\.[^.]+$/, ''),
+        file: filename.replace(/\.[^.]+$/, '.webp'),
+        thumbnail: thumbFilename,
+        initialPosition: { x: 1000, y: 0, z: 0 },
+        hotspots: [],
+      };
+
+      config.panoramas.push(newPanorama);
+      uploadedFiles.push({ name: file.name, panoramaId: panoId });
+    }
+
+    // Update config
+    await updateProjectConfig(projectId, config);
+
+    return NextResponse.json({
+      success: true,
+      uploadedFiles,
+      totalPanoramas: config.panoramas.length,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('Forbidden')) {
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    }
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    console.error('Upload error:', error);
+    return NextResponse.json({ error: 'Upload failed' }, { status: 500 });
+  }
+}

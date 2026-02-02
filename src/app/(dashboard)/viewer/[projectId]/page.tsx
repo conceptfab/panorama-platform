@@ -1,0 +1,59 @@
+import { notFound } from 'next/navigation';
+import { getSession } from '@/lib/auth/session';
+import { getProjectById, getProjectConfig } from '@/lib/db/projects';
+import { getUserById } from '@/lib/db/users';
+import { PanoViewer } from '@/components/viewer/PanoViewer';
+
+interface PageProps {
+  params: Promise<{ projectId: string }>;
+}
+
+export default async function ViewerPage({ params }: PageProps) {
+  const session = await getSession();
+  if (!session) {
+    notFound();
+  }
+
+  const { projectId } = await params;
+  const project = await getProjectById(projectId);
+
+  if (!project) {
+    notFound();
+  }
+
+  // Check access
+  if (session.role !== 'admin') {
+    const user = await getUserById(session.userId);
+    if (!user) notFound();
+
+    const hasAccess =
+      project.isPublished &&
+      project.groupIds.some((gid) => user.groupIds.includes(gid));
+
+    if (!hasAccess) {
+      notFound();
+    }
+  }
+
+  const config = await getProjectConfig(projectId);
+  if (!config || config.panoramas.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <p className="text-muted-foreground">Ten projekt nie ma jeszcze panoram</p>
+        </div>
+      </div>
+    );
+  }
+
+  const basePath = `/uploads/projects/${projectId}`;
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black -m-[inherit]">
+      <PanoViewer
+        config={config}
+        basePath={basePath}
+      />
+    </div>
+  );
+}

@@ -1,0 +1,19 @@
+{
+  "whitelist": [
+    {
+      "id": "wl-001",
+      "pattern": "*@conceptfab.com",
+      "isActive": true,
+      "createdAt": "2026-01-01T00:00:00Z",
+      "notes": "Pracownicy firmy"
+    },
+    {
+      "id": "wl-d216b60f",
+      "pattern": "micz@kleniewski.com",
+      "isActive": true,
+      "createdAt": "2026-02-02T14:34:39.543Z",
+      "notes": ""
+    }
+  ],
+  "blacklist": []
+}

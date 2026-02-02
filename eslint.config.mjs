@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Vendor libraries
+    "public/panolens/**",
+    // Scripts (Node.js)
+    "scripts/**",
   ]),
 ]);
 

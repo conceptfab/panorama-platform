@@ -1,0 +1,20 @@
+{
+  "groups": [
+    {
+      "id": "group-001",
+      "name": "Administratorzy",
+      "description": "Pełny dostęp do wszystkich projektów",
+      "color": "#20b2aa",
+      "createdAt": "2026-01-01T00:00:00Z",
+      "projectIds": []
+    },
+    {
+      "id": "group-f3efd3df",
+      "name": "Metro",
+      "description": "",
+      "color": "#6b7280",
+      "createdAt": "2026-02-02T14:35:34.044Z",
+      "projectIds": []
+    }
+  ]
+}

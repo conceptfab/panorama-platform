@@ -1,0 +1,22 @@
+{
+  "version": "1.0",
+  "projectName": "Jutrzenki",
+  "description": "",
+  "createdAt": "2026-02-02T14:35:54.376Z",
+  "updatedAt": "2026-02-02T14:35:54.376Z",
+  "settings": {
+    "autoRotate": true,
+    "autoRotateSpeed": 0.5,
+    "autoRotateDelay": 30000,
+    "cameraFov": 55,
+    "controlBar": false,
+    "splashDuration": 3000,
+    "fadeDuration": 2000
+  },
+  "panoramas": [],
+  "metadata": {
+    "author": "CONCEPTFAB",
+    "client": "",
+    "tags": []
+  }
+}

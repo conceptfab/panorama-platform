@@ -1,0 +1,17 @@
+{
+  "projects": [
+    {
+      "id": "proj-75c6a0e3",
+      "name": "Jutrzenki",
+      "description": "",
+      "thumbnailUrl": "",
+      "configPath": "/uploads/projects/proj-75c6a0e3/config.json",
+      "createdAt": "2026-02-02T14:35:54.376Z",
+      "updatedAt": "2026-02-02T14:35:54.376Z",
+      "createdBy": "user-001",
+      "groupIds": [],
+      "isPublished": false,
+      "panoramaCount": 0
+    }
+  ]
+}
