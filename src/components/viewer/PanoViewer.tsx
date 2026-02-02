@@ -33,7 +33,7 @@ export function PanoViewer({
   const [scriptsLoaded, setScriptsLoaded] = useState(false);
   const [autoRotate, setAutoRotate] = useState(config.settings.autoRotate);
   const [threeLoaded, setThreeLoaded] = useState(false);
-  const [currentPanoramaIndex, setCurrentPanoramaIndex] = useState(0);
+  const [, setCurrentPanoramaIndex] = useState(0);
 
   /** Losowa prędkość 0.2–0.5, losowy kierunek. Zwraca czas pełnego obrotu w ms (Three.js autoRotateSpeed: 2 ≈ 30 s). */
   const applyRandomAutoRotate = useCallback(
@@ -268,20 +268,12 @@ export function PanoViewer({
   }, []);
 
   const handleHome = useCallback(() => {
-    const viewer = viewerRef.current as {
-      tweenControlCenter?: (
-        v: { x: number; y: number; z: number },
-        ms: number
-      ) => void;
-    };
-    const panoData = config.panoramas[currentPanoramaIndex];
-    if (!viewer?.tweenControlCenter || !panoData || !window.THREE) return;
-    const pos = panoData.initialPosition;
-    viewer.tweenControlCenter(
-      new window.THREE.Vector3(pos.x, pos.y, pos.z),
-      800
-    );
-  }, [config.panoramas, currentPanoramaIndex]);
+    const viewer = viewerRef.current as { setPanorama?: (p: unknown) => void };
+    const panoramas = panoramasRef.current;
+    if (viewer?.setPanorama && panoramas[0]) {
+      viewer.setPanorama(panoramas[0]);
+    }
+  }, []);
 
   const handleScreenshot = useCallback(() => {
     const container = containerRef.current;
