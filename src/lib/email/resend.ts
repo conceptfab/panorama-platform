@@ -1,5 +1,8 @@
 import { Resend } from 'resend';
-import { getOTPEmailTemplate } from './templates';
+import {
+  getOTPEmailTemplate,
+  getPendingRequestNotificationTemplate,
+} from './templates';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -67,5 +70,31 @@ export async function sendOTPEmail(
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
     };
+  }
+}
+
+/** Wysyła do każdego admina maila, że ktoś (requesterEmail) czeka w poczekalni. */
+export async function sendPendingRequestNotificationToAdmins(
+  adminEmails: string[],
+  requesterEmail: string
+): Promise<void> {
+  if (adminEmails.length === 0) return;
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? '')
+    .trim()
+    .replace(/\/$/, '');
+  const subject = `[CONCEPTFAB Pano] Nowa prośba o dostęp: ${requesterEmail}`;
+  const html = getPendingRequestNotificationTemplate(requesterEmail, appUrl);
+  for (const to of adminEmails) {
+    try {
+      const { error } = await resend.emails.send({
+        from: getEmailFrom(),
+        to,
+        subject,
+        html,
+      });
+      if (error) console.error('[Pending notification]', to, error.message);
+    } catch (e) {
+      console.error('[Pending notification]', to, e);
+    }
   }
 }

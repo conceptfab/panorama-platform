@@ -7,8 +7,11 @@ import {
 } from '@/lib/auth/access-control';
 import { matchEmailPattern } from '@/utils/helpers';
 import { generateOTP, storeOTP } from '@/lib/auth/otp';
-import { sendOTPEmail } from '@/lib/email/resend';
-import { getUserByEmail } from '@/lib/db/users';
+import {
+  sendOTPEmail,
+  sendPendingRequestNotificationToAdmins,
+} from '@/lib/email/resend';
+import { getUsers, getUserByEmail } from '@/lib/db/users';
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,6 +35,12 @@ export async function POST(request: NextRequest) {
       }
       // Nie na whitelist, nie na blacklist = poczekalnia
       await addToPending(email);
+      // Powiadom adminów mailem
+      const users = await getUsers();
+      const adminEmails = users
+        .filter((u) => u.role === 'admin' && u.isActive)
+        .map((u) => u.email);
+      await sendPendingRequestNotificationToAdmins(adminEmails, email);
       return NextResponse.json({
         success: true,
         waitingApproval: true,

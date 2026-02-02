@@ -59,3 +59,52 @@ export function getOTPEmailTemplate(
 </html>
 `;
 }
+
+/** Szablon maila do admina: ktoś czeka w poczekalni. */
+export function getPendingRequestNotificationTemplate(
+  requesterEmail: string,
+  appUrl: string = ''
+): string {
+  const displayUrl = appUrl || '[adres aplikacji]';
+  return `
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nowa prośba o dostęp - CONCEPTFAB Pano</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f4f4f5;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f4f4f5;">
+    <tr>
+      <td style="padding: 40px 20px;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 480px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
+          <tr>
+            <td style="padding: 40px 32px;">
+              <h1 style="margin: 0 0 24px 0; font-size: 20px; font-weight: 600; color: #18181b;">
+                Nowa prośba o dostęp
+              </h1>
+              <p style="margin: 0 0 16px 0; font-size: 16px; line-height: 24px; color: #52525b;">
+                Użytkownik <strong>${requesterEmail}</strong> próbował się zalogować i trafił do <strong>poczekalni</strong>. Czeka na Twoje zatwierdzenie.
+              </p>
+              <p style="margin: 0 0 24px 0; font-size: 14px; line-height: 22px; color: #71717a;">
+                Zaloguj się do panelu administratora, wejdź w <strong>Użytkownicy</strong> → zakładka <strong>Poczekalnia</strong>, a następnie zatwierdź lub odrzuć zgłoszenie.
+              </p>
+              ${
+                appUrl
+                  ? `<p style="margin: 0;"><a href="${appUrl}/admin/users" style="display: inline-block; background-color: #18181b; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 500;">Otwórz poczekalnię</a></p>`
+                  : ''
+              }
+            </td>
+          </tr>
+        </table>
+        <p style="margin: 24px 0 0 0; font-size: 12px; color: #a1a1aa; text-align: center;">
+          CONCEPTFAB Pano – powiadomienie dla administratora
+        </p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`;
+}
