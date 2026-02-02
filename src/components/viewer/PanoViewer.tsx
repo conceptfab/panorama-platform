@@ -33,7 +33,7 @@ export function PanoViewer({
   const [scriptsLoaded, setScriptsLoaded] = useState(false);
   const [autoRotate, setAutoRotate] = useState(config.settings.autoRotate);
   const [threeLoaded, setThreeLoaded] = useState(false);
-  const [, setCurrentPanoramaIndex] = useState(0);
+  const [currentPanoramaIndex, setCurrentPanoramaIndex] = useState(0);
 
   /** Losowa prędkość 0.2–0.5, losowy kierunek. Zwraca czas pełnego obrotu w ms (Three.js autoRotateSpeed: 2 ≈ 30 s). */
   const applyRandomAutoRotate = useCallback(
@@ -268,12 +268,20 @@ export function PanoViewer({
   }, []);
 
   const handleHome = useCallback(() => {
-    const viewer = viewerRef.current as { setPanorama?: (p: unknown) => void };
-    const panoramas = panoramasRef.current;
-    if (viewer?.setPanorama && panoramas[0]) {
-      viewer.setPanorama(panoramas[0]);
-    }
-  }, []);
+    const viewer = viewerRef.current as {
+      tweenControlCenter?: (
+        v: { x: number; y: number; z: number },
+        ms: number
+      ) => void;
+    };
+    const panoData = config.panoramas[currentPanoramaIndex];
+    if (!viewer?.tweenControlCenter || !panoData || !window.THREE) return;
+    const pos = panoData.initialPosition;
+    viewer.tweenControlCenter(
+      new window.THREE.Vector3(pos.x, pos.y, pos.z),
+      800
+    );
+  }, [config.panoramas, currentPanoramaIndex]);
 
   const handleScreenshot = useCallback(() => {
     const container = containerRef.current;
@@ -342,6 +350,12 @@ export function PanoViewer({
           ctx.font = `300 ${smallFontSize}px Inter, sans-serif`;
           ctx.fillText('CONCEPTFAB', xRight - suffixWidth, baselineY);
 
+          // Pod nazwą aplikacji: nazwa projektu (wysokość jak „Pano”)
+          const lineHeight = fontSize * 1.4;
+          const projectY = baselineY + lineHeight;
+          ctx.font = `400 ${panoFontSize}px Inter, sans-serif`;
+          ctx.fillText(config.projectName, xRight, projectY);
+
           let dataUrl;
           let ext = 'webp';
           try {
@@ -351,10 +365,17 @@ export function PanoViewer({
             dataUrl = tmp.toDataURL('image/jpeg', 0.92);
           }
 
-          const name = `panorama-${new Date()
-            .toISOString()
-            .slice(0, 19)
-            .replace(/:/g, '-')}.${ext}`;
+          const d = new Date();
+          const timePart = `${String(d.getHours()).padStart(2, '0')}-${String(
+            d.getMinutes()
+          ).padStart(2, '0')}`;
+          const datePart = `${String(d.getDate()).padStart(2, '0')}-${String(
+            d.getMonth() + 1
+          ).padStart(2, '0')}-${d.getFullYear()}`;
+          const safeProject =
+            config.projectName.replace(/[\s\W]+/g, '_').replace(/^_|_$/g, '') ||
+            'panorama';
+          const name = `${safeProject}_cfab_pano_${timePart}_${datePart}.${ext}`;
           const a = document.createElement('a');
           a.download = name;
           a.href = dataUrl;
@@ -366,7 +387,7 @@ export function PanoViewer({
         }
       });
     });
-  }, []);
+  }, [config.projectName]);
 
   const handleGenerateThumbnail = useCallback(async () => {
     if (!projectId || !isAdmin) return;

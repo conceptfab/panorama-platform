@@ -4,8 +4,8 @@ TODO
 
 - pliki do zawsze webP
 - system zapisywania danych / statystyk uzytkowników JSON - pliki 24H
-- w screen shocie nazwa projektu
-- poprawki UI
+- poprawki UI - ikonki 
+- 3 rodzaje wielkosci ikon projektów, w najwieszkym rozmiarze ikony edycji
 
 
 
