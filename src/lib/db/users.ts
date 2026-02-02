@@ -1,4 +1,4 @@
-import { readJsonFile, writeJsonFile } from './json-store';
+import { readJsonFileWithDefault, writeJsonFile } from './json-store';
 import { User, UsersData } from '@/types';
 import { generateId, formatDate } from '@/utils/helpers';
 import { usersDataSchema } from '@/utils/validation';
@@ -6,7 +6,9 @@ import { usersDataSchema } from '@/utils/validation';
 const USERS_FILE = 'users.json';
 
 export async function getUsers(): Promise<User[]> {
-  const data = await readJsonFile<UsersData>(USERS_FILE);
+  const data = await readJsonFileWithDefault<UsersData>(USERS_FILE, {
+    users: [],
+  });
   const validated = usersDataSchema.parse(data);
   return validated.users;
 }
@@ -18,7 +20,9 @@ export async function getUserById(id: string): Promise<User | null> {
 
 export async function getUserByEmail(email: string): Promise<User | null> {
   const users = await getUsers();
-  return users.find((u) => u.email.toLowerCase() === email.toLowerCase()) || null;
+  return (
+    users.find((u) => u.email.toLowerCase() === email.toLowerCase()) || null
+  );
 }
 
 export async function createUser(
@@ -28,7 +32,9 @@ export async function createUser(
 ): Promise<User> {
   const users = await getUsers();
 
-  const existing = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+  const existing = users.find(
+    (u) => u.email.toLowerCase() === email.toLowerCase()
+  );
   if (existing) {
     throw new Error('User with this email already exists');
   }

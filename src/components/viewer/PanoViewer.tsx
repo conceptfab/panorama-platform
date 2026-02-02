@@ -260,7 +260,7 @@ export function PanoViewer({
             typeof process !== 'undefined'
               ? process.env.NEXT_PUBLIC_APP_VERSION ?? '0.0.0'
               : '0.0.0';
-          const panoPart = ' Pano Viewer ';
+          const panoPart = ' Pano ';
           const versionPart = `v: ${appVersion}`;
           const fontSize = Math.max(14, Math.round(w / 60));
           const smallFontSize = fontSize * 0.7;

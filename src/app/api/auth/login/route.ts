@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
 
     // Generate 6-digit OTP code
     const code = generateOTP();
-    storeOTP(email, code);
+    await storeOTP(email, code);
 
     const isDev = process.env.NODE_ENV === 'development';
     if (isDev) {
@@ -66,9 +66,6 @@ export async function POST(request: NextRequest) {
     const isDev = process.env.NODE_ENV === 'development';
     const message =
       isDev && error instanceof Error ? error.message : 'Nieprawidłowe dane';
-    return NextResponse.json(
-      { success: false, message },
-      { status: 400 }
-    );
+    return NextResponse.json({ success: false, message }, { status: 400 });
   }
 }

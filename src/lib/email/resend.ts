@@ -47,7 +47,7 @@ export async function sendOTPEmail(
     const { error } = await resend.emails.send({
       from: getEmailFrom(),
       to: email,
-      subject: `Kod logowania - Pano Viewer v: ${appVersion}`,
+      subject: `Kod logowania - CONCEPTFAB Pano v: ${appVersion}`,
       html: getOTPEmailTemplate(code, appVersion),
     });
 

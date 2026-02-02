@@ -2,8 +2,8 @@ export function getOTPEmailTemplate(
   code: string,
   version: string = '0.0.0'
 ): string {
-  const viewerLabel = `Pano Viewer v: ${version}`;
-  const viewerLabelHtml = `Pano Viewer <span style="font-size: 10px;">v: ${version}</span>`;
+  const viewerLabel = `CONCEPTFAB Pano v: ${version}`;
+  const viewerLabelHtml = `CONCEPTFAB Pano <span style="font-size: 10px;">v: ${version}</span>`;
   return `
 <!DOCTYPE html>
 <html lang="pl">

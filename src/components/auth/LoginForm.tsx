@@ -177,7 +177,7 @@ export function LoginForm() {
           <span className="text-[0.7em]">CONCEPTFAB</span>
           <br />
           <span className="text-[0.91em] font-normal text-muted-foreground">
-            Pano Viewer{' '}
+            Pano{' '}
             <span className="text-[10px]">
               v: {process.env.NEXT_PUBLIC_APP_VERSION ?? '0.0.0'}
             </span>

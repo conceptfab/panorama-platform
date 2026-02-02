@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     const { email, code } = verifySchema.parse(body);
 
     // Verify OTP code
-    const verification = verifyOTP(email, code);
+    const verification = await verifyOTP(email, code);
 
     if (!verification.valid) {
       return NextResponse.json(

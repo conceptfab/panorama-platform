@@ -1,72 +1,96 @@
-// In-memory OTP store (w produkcji użyj Redis)
+// OTP store w pliku (data/otp-store.json) – działa po restarcie i przy wielu instancjach
 // Kody wygasają po 10 minutach
+
+import { readJsonFileWithDefault, writeJsonFile } from '@/lib/db/json-store';
 
 interface OTPEntry {
   code: string;
-  email: string;
   expiresAt: number;
   attempts: number;
 }
 
-const otpStore = new Map<string, OTPEntry>();
+type OtpStore = Record<string, OTPEntry>;
+
+const OTP_STORE_FILE = 'otp-store.json';
 const MAX_ATTEMPTS = 3;
 const OTP_EXPIRATION_MS = 10 * 60 * 1000; // 10 minut
 
-// Cleanup expired entries every 5 minutes
-if (typeof setInterval !== 'undefined') {
-  setInterval(() => {
-    const now = Date.now();
-    for (const [key, entry] of otpStore.entries()) {
-      if (entry.expiresAt < now) {
-        otpStore.delete(key);
-      }
-    }
-  }, 5 * 60 * 1000);
+async function readStore(): Promise<OtpStore> {
+  const store = await readJsonFileWithDefault<OtpStore>(OTP_STORE_FILE, {});
+  const now = Date.now();
+  const pruned: OtpStore = {};
+  for (const [email, entry] of Object.entries(store)) {
+    if (entry.expiresAt >= now) pruned[email] = entry;
+  }
+  if (Object.keys(pruned).length !== Object.keys(store).length) {
+    await writeJsonFile(OTP_STORE_FILE, pruned);
+  }
+  return pruned;
 }
 
 export function generateOTP(): string {
-  // Generuj 6-cyfrowy kod
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-export function storeOTP(email: string, code: string): void {
+export async function storeOTP(email: string, code: string): Promise<void> {
   const normalizedEmail = email.toLowerCase().trim();
-  otpStore.set(normalizedEmail, {
+  const store = await readStore();
+  store[normalizedEmail] = {
     code,
-    email: normalizedEmail,
     expiresAt: Date.now() + OTP_EXPIRATION_MS,
     attempts: 0,
-  });
+  };
+  await writeJsonFile(OTP_STORE_FILE, store);
 }
 
-export function verifyOTP(email: string, code: string): { valid: boolean; error?: string } {
+export async function verifyOTP(
+  email: string,
+  code: string
+): Promise<{ valid: boolean; error?: string }> {
   const normalizedEmail = email.toLowerCase().trim();
-  const entry = otpStore.get(normalizedEmail);
+  const store = await readStore();
+  const entry = store[normalizedEmail];
 
   if (!entry) {
     return { valid: false, error: 'Nie znaleziono kodu. Poproś o nowy kod.' };
   }
 
   if (entry.expiresAt < Date.now()) {
-    otpStore.delete(normalizedEmail);
+    delete store[normalizedEmail];
+    await writeJsonFile(OTP_STORE_FILE, store);
     return { valid: false, error: 'Kod wygasł. Poproś o nowy kod.' };
   }
 
   if (entry.attempts >= MAX_ATTEMPTS) {
-    otpStore.delete(normalizedEmail);
-    return { valid: false, error: 'Przekroczono limit prób. Poproś o nowy kod.' };
+    delete store[normalizedEmail];
+    await writeJsonFile(OTP_STORE_FILE, store);
+    return {
+      valid: false,
+      error: 'Przekroczono limit prób. Poproś o nowy kod.',
+    };
   }
 
   if (entry.code !== code) {
     entry.attempts++;
-    return { valid: false, error: `Nieprawidłowy kod. Pozostało prób: ${MAX_ATTEMPTS - entry.attempts}` };
+    await writeJsonFile(OTP_STORE_FILE, store);
+    return {
+      valid: false,
+      error: `Nieprawidłowy kod. Pozostało prób: ${
+        MAX_ATTEMPTS - entry.attempts
+      }`,
+    };
   }
 
-  // Kod poprawny - usuń z store
-  otpStore.delete(normalizedEmail);
+  delete store[normalizedEmail];
+  await writeJsonFile(OTP_STORE_FILE, store);
   return { valid: true };
 }
 
-export function deleteOTP(email: string): void {
-  otpStore.delete(email.toLowerCase().trim());
+export async function deleteOTP(email: string): Promise<void> {
+  const store = await readStore();
+  const key = email.toLowerCase().trim();
+  if (key in store) {
+    delete store[key];
+    await writeJsonFile(OTP_STORE_FILE, store);
+  }
 }

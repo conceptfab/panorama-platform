@@ -7,5 +7,5 @@ export const APP_VERSION =
 /** Etykieta "Pano v: x.y.z" do wyświetlania w UI. */
 export const PANO_VERSION_LABEL = `Pano v: ${APP_VERSION}`;
 
-/** Etykieta "Pano Viewer v: x.y.z". */
-export const PANO_VIEWER_VERSION_LABEL = `Pano Viewer v: ${APP_VERSION}`;
+/** Etykieta "CONCEPTFAB Pano v: x.y.z". */
+export const PANO_VIEWER_VERSION_LABEL = `CONCEPTFAB Pano v: ${APP_VERSION}`;
