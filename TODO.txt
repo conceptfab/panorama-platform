@@ -1,4 +1,9 @@
 TODO
+- poprawki, optymalizacje, walidacja bezpieczenstwa
+- operacje na plikach w menadzerze
+
+- pliki do zawsze webP
+- system zapisywania danych / statystyk uzytkowników JSON - pliki 24H
 
 
 

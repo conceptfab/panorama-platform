@@ -1,4 +1,5 @@
 import { promises as fs } from 'fs';
+import { existsSync } from 'fs';
 import path from 'path';
 import {
   readJsonFile,
@@ -21,9 +22,31 @@ export async function getProjects(): Promise<Project[]> {
   return validated.projects;
 }
 
+/**
+ * Lista projektów budowana z dysku przy każdym odświeżeniu.
+ * Czyta katalog uploads/projects/, dla każdego podkatalogu szuka wpisu w projects.json.
+ */
+export async function getProjectsWithExistingFolders(): Promise<Project[]> {
+  let dirIds: string[];
+  try {
+    const entries = await fs.readdir(UPLOADS_DIR, { withFileTypes: true });
+    dirIds = entries.filter((e) => e.isDirectory()).map((e) => e.name);
+  } catch {
+    dirIds = [];
+  }
+  const projects = await getProjects();
+  const byId = new Map(projects.map((p) => [p.id, p]));
+  return dirIds
+    .map((id) => byId.get(id))
+    .filter((p): p is Project => p != null);
+}
+
 export async function getProjectById(id: string): Promise<Project | null> {
   const projects = await getProjects();
-  return projects.find((p) => p.id === id) || null;
+  const project = projects.find((p) => p.id === id) || null;
+  if (!project) return null;
+  if (!existsSync(path.join(UPLOADS_DIR, id))) return null;
+  return project;
 }
 
 export async function getProjectsByGroupId(
@@ -147,7 +170,9 @@ export async function deleteProject(id: string): Promise<boolean> {
   if (index === -1) return false;
 
   const projectDir = path.join(UPLOADS_DIR, id);
-  await deleteDir(projectDir);
+  if (existsSync(projectDir)) {
+    await deleteDir(projectDir);
+  }
 
   projects.splice(index, 1);
   await writeJsonFile<ProjectsData>(PROJECTS_FILE, { projects });

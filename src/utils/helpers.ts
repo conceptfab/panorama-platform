@@ -10,10 +10,22 @@ export function formatDate(date: Date | string): string {
   return d.toISOString();
 }
 
+const POLISH_MAP: Record<string, string> = {
+  'ą': 'a', 'ć': 'c', 'ę': 'e', 'ł': 'l', 'ń': 'n',
+  'ó': 'o', 'ś': 's', 'ź': 'z', 'ż': 'z',
+  'Ą': 'a', 'Ć': 'c', 'Ę': 'e', 'Ł': 'l', 'Ń': 'n',
+  'Ó': 'o', 'Ś': 's', 'Ź': 'z', 'Ż': 'z',
+};
+
 export function slugify(text: string): string {
   return text
+    .split('')
+    .map(c => POLISH_MAP[c] || c)
+    .join('')
     .toLowerCase()
-    .replace(/[^\w\s-]/g, '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+    .replace(/[^a-z0-9\s-]/g, '')
     .replace(/[\s_-]+/g, '-')
     .replace(/^-+|-+$/g, '');
 }

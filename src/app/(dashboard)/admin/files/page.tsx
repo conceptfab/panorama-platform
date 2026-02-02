@@ -1,8 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/auth/session';
-import { getProjects, getProjectSize } from '@/lib/db/projects';
-import { FileManager } from '@/components/admin/FileManager';
-import { Project } from '@/types';
+import { DataFileExplorer } from '@/components/admin/DataFileExplorer';
 
 export default async function AdminFilesPage() {
   const session = await getSession();
@@ -10,24 +8,18 @@ export default async function AdminFilesPage() {
     redirect('/');
   }
 
-  const projects = await getProjects();
-  const projectsWithSize: (Project & { size?: number })[] = await Promise.all(
-    projects.map(async (p) => ({
-      ...p,
-      size: await getProjectSize(p.id),
-    }))
-  );
-
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold">Pliki</h1>
         <p className="text-muted-foreground mt-1">
-          Zarządzanie plikami, backup i import projektów
+          Menedżer plików – edycja i praca na plikach danych aplikacji
         </p>
       </div>
 
-      <FileManager projects={projectsWithSize} />
+      <div className="border rounded-lg p-4 bg-card">
+        <DataFileExplorer />
+      </div>
     </div>
   );
 }

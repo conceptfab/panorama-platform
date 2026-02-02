@@ -10,10 +10,7 @@ export default async function AdminGroupsPage() {
     redirect('/');
   }
 
-  const [groups, projects] = await Promise.all([
-    getGroups(),
-    getProjects(),
-  ]);
+  const [groups, projects] = await Promise.all([getGroups(), getProjects()]);
 
   return (
     <div className="space-y-8">

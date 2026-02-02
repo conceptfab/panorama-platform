@@ -13,11 +13,11 @@
 
 ## Krok 2: Dodaj Volume (WAŻNE!)
 
-Railway ma ephemeral filesystem - pliki znikają po restarcie. Musisz dodać Volume:
+Railway ma ephemeral filesystem - pliki znikają po restarcie. Wszystkie dane muszą być na Volume:
 
 1. W projekcie kliknij "New" → "Volume"
 2. Nazwa: `pano-data`
-3. Mount Path: `/data`
+3. Mount Path: **`/pano-data`** (np. 5 GB)
 4. Kliknij "Create"
 
 ## Krok 3: Zmienne środowiskowe
@@ -27,7 +27,9 @@ W ustawieniach projektu → Variables, dodaj:
 ```env
 # Wymagane
 JWT_SECRET=wygeneruj-bezpieczny-klucz-min-32-znaki
-PANO_DATA_DIR=/data
+
+# Dane: Railway ustawia RAILWAY_VOLUME_MOUNT_PATH automatycznie (np. /pano-data).
+# Aplikacja używa tej ścieżki – PANO_DATA_DIR nie jest wymagane.
 
 # Admin (pierwsze uruchomienie)
 ADMIN_EMAIL=twoj@email.com
@@ -44,16 +46,17 @@ NEXT_PUBLIC_APP_URL=https://twoja-domena.railway.app
 ## Krok 4: Deploy
 
 Railway automatycznie:
+
 1. Wykryje Next.js i zbuduje aplikację
 2. Uruchomi `npm run start` (który najpierw inicjalizuje dane)
 3. Udostępni aplikację pod adresem `*.railway.app`
 
 ## Struktura danych
 
-Po uruchomieniu, w Volume `/data` powstanie:
+Wszystkie dane są pod ścieżką Volume (`RAILWAY_VOLUME_MOUNT_PATH`, np. `/pano-data`):
 
 ```
-/data/
+/pano-data/
 ├── data/
 │   ├── users.json
 │   ├── groups.json
@@ -70,6 +73,7 @@ Po uruchomieniu, w Volume `/data` powstanie:
 ## Pierwsze logowanie
 
 Po deploymencie:
+
 1. Wejdź na `https://twoja-domena.railway.app/login`
 2. Zaloguj się emailem i hasłem z ADMIN_EMAIL/ADMIN_PASSWORD
 3. **Natychmiast zmień hasło w ustawieniach!**
@@ -77,14 +81,17 @@ Po deploymencie:
 ## Troubleshooting
 
 ### Dane znikają po restarcie
-- Sprawdź czy Volume jest zamontowany na `/data`
-- Sprawdź czy `PANO_DATA_DIR=/data` jest ustawione
+
+- Sprawdź czy Volume jest dodany i zamontowany (Mount Path np. `/pano-data`)
+- Railway ustawia `RAILWAY_VOLUME_MOUNT_PATH` automatycznie – aplikacja z niego korzysta
 
 ### Błąd 500 przy uploadzie
+
 - Sprawdź logi: Railway Dashboard → Logs
 - Upewnij się że Volume ma wystarczająco miejsca
 
 ### Aplikacja nie startuje
+
 - Sprawdź czy wszystkie wymagane zmienne są ustawione
 - Sprawdź logi budowania
 
@@ -98,6 +105,7 @@ Po deploymencie:
 ## Backup
 
 Regularnie eksportuj dane z Volume:
+
 ```bash
 railway run tar -czvf backup.tar.gz /data
 ```

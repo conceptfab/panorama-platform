@@ -1,10 +1,11 @@
 import { redirect, notFound } from 'next/navigation';
 import { getSession } from '@/lib/auth/session';
-import { getProjectById, getProjectConfig } from '@/lib/db/projects';
+import { getProjectById, getProjectConfig, getProjectSize } from '@/lib/db/projects';
 import { getGroups } from '@/lib/db/groups';
 import { ProjectEditForm } from '@/components/admin/ProjectEditForm';
 import { FileUploader } from '@/components/admin/FileUploader';
 import { PanoramaList } from '@/components/editor/PanoramaList';
+import { ProjectDownloadCard } from '@/components/admin/ProjectDownloadCard';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -17,10 +18,11 @@ export default async function ProjectEditPage({ params }: PageProps) {
   }
 
   const { id } = await params;
-  const [project, config, groups] = await Promise.all([
+  const [project, config, groups, size] = await Promise.all([
     getProjectById(id),
     getProjectConfig(id),
     getGroups(),
+    getProjectSize(id),
   ]);
 
   if (!project) {
@@ -36,6 +38,8 @@ export default async function ProjectEditPage({ params }: PageProps) {
       {config && config.panoramas.length > 0 && (
         <PanoramaList projectId={id} panoramas={config.panoramas} />
       )}
+
+      <ProjectDownloadCard project={project} size={size} />
     </div>
   );
 }
