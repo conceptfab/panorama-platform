@@ -2,7 +2,7 @@ import { promises as fs } from 'fs';
 import { existsSync } from 'fs';
 import path from 'path';
 import {
-  readJsonFile,
+  readJsonFileWithDefault,
   writeJsonFile,
   ensureDir,
   deleteDir,
@@ -17,7 +17,9 @@ const PROJECTS_FILE = 'projects.json';
 const UPLOADS_DIR = path.join(getDataRoot(), 'uploads', 'projects');
 
 export async function getProjects(): Promise<Project[]> {
-  const data = await readJsonFile<ProjectsData>(PROJECTS_FILE);
+  const data = await readJsonFileWithDefault<ProjectsData>(PROJECTS_FILE, {
+    projects: [],
+  });
   const validated = projectsDataSchema.parse(data);
   return validated.projects;
 }

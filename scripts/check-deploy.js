@@ -192,6 +192,15 @@ const optionalEnvVars = [
     desc: 'Should be "production" on Railway',
     default: 'production',
   },
+  {
+    name: 'ADMIN_EMAIL',
+    desc: 'Email konta administratora (init-data.js przy pierwszym uruchomieniu)',
+  },
+  {
+    name: 'ADMIN_PASSWORD',
+    desc: 'Hasło admina przy pierwszej inicjalizacji',
+    secret: true,
+  },
   { name: 'JWT_EXPIRATION', desc: 'Session duration', default: '7d' },
   { name: 'EMAIL_FROM', desc: 'Sender email address' },
   {

@@ -40,7 +40,8 @@ const defaultProjects = {
 };
 
 const defaultAccessControl = {
-  accessControl: [],
+  whitelist: [],
+  blacklist: [],
 };
 
 // Simple password hash (same as in the app)

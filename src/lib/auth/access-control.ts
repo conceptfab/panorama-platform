@@ -1,12 +1,20 @@
-import { readJsonFile, writeJsonFile } from '../db/json-store';
+import { readJsonFileWithDefault, writeJsonFile } from '../db/json-store';
 import { AccessControl, AccessRule } from '@/types';
 import { generateId, formatDate, matchEmailPattern } from '@/utils/helpers';
 import { accessControlSchema } from '@/utils/validation';
 
 const ACCESS_CONTROL_FILE = 'access-control.json';
 
+const DEFAULT_ACCESS_CONTROL: AccessControl = {
+  whitelist: [],
+  blacklist: [],
+};
+
 export async function getAccessControl(): Promise<AccessControl> {
-  const data = await readJsonFile<AccessControl>(ACCESS_CONTROL_FILE);
+  const data = await readJsonFileWithDefault<AccessControl>(
+    ACCESS_CONTROL_FILE,
+    DEFAULT_ACCESS_CONTROL
+  );
   return accessControlSchema.parse(data);
 }
 

@@ -63,8 +63,11 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Login error:', error);
+    const isDev = process.env.NODE_ENV === 'development';
+    const message =
+      isDev && error instanceof Error ? error.message : 'Nieprawidłowe dane';
     return NextResponse.json(
-      { success: false, message: 'Nieprawidłowe dane' },
+      { success: false, message },
       { status: 400 }
     );
   }

@@ -22,20 +22,29 @@ Railway ma ephemeral filesystem - pliki znikają po restarcie. Wszystkie dane mu
 
 ## Krok 3: Zmienne środowiskowe
 
-W ustawieniach projektu → Variables, dodaj:
+W ustawieniach projektu na Railway: **Variables** (lub **Settings → Environment Variables**). Dodaj co najmniej:
+
+| Zmienna | Opis | Przykład |
+|--------|------|----------|
+| **ADMIN_EMAIL** | Email konta administratora (używany przy pierwszej inicjalizacji) | `admin@twojadomena.com` |
+| **ADMIN_PASSWORD** | Hasło admina (ustaw na pierwszym uruchomieniu, potem zmień w aplikacji) | `bezpieczne-haslo` |
+| **JWT_SECRET** | Klucz JWT (min. 32 znaki) | wygeneruj losowy ciąg |
+| **NEXT_PUBLIC_APP_URL** | Adres aplikacji | `https://pano.conceptfab.com` |
+
+Pełna lista (do wklejenia lub uzupełnienia w Railway):
 
 ```env
 # Wymagane
 JWT_SECRET=wygeneruj-bezpieczny-klucz-min-32-znaki
 
-# Dane: Railway ustawia RAILWAY_VOLUME_MOUNT_PATH automatycznie (np. /pano-data).
-# Aplikacja używa tej ścieżki – PANO_DATA_DIR nie jest wymagane.
-
-# Admin (pierwsze uruchomienie)
+# Admin – konto tworzone przy pierwszym uruchomieniu (init-data.js)
 ADMIN_EMAIL=twoj@email.com
 ADMIN_PASSWORD=bezpieczne-haslo
 
-# Email (opcjonalne - do magic links)
+# Dane: Railway ustawia RAILWAY_VOLUME_MOUNT_PATH automatycznie (np. /pano-data).
+# Aplikacja używa tej ścieżki – PANO_DATA_DIR nie jest wymagane.
+
+# Email (do wysyłki kodów logowania)
 RESEND_API_KEY=re_xxxxx
 EMAIL_FROM=Panorama <noreply@twojadomena.com>
 

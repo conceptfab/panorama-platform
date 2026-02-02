@@ -1,4 +1,4 @@
-import { readJsonFile, writeJsonFile } from './json-store';
+import { readJsonFileWithDefault, writeJsonFile } from './json-store';
 import { Group, GroupsData } from '@/types';
 import { generateId, formatDate } from '@/utils/helpers';
 import { groupsDataSchema } from '@/utils/validation';
@@ -10,7 +10,9 @@ import {
 const GROUPS_FILE = 'groups.json';
 
 export async function getGroups(): Promise<Group[]> {
-  const data = await readJsonFile<GroupsData>(GROUPS_FILE);
+  const data = await readJsonFileWithDefault<GroupsData>(GROUPS_FILE, {
+    groups: [],
+  });
   const validated = groupsDataSchema.parse(data);
   return validated.groups;
 }

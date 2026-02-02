@@ -1,7 +1,10 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/auth/session';
-import { getProjectsWithExistingFolders, getProjectSize } from '@/lib/db/projects';
+import {
+  getProjectsWithExistingFolders,
+  getProjectSize,
+} from '@/lib/db/projects';
 import { Button } from '@/components/ui/button';
 import { ProjectCard } from '@/components/admin/ProjectCard';
 import { FileManager } from '@/components/admin/FileManager';

@@ -18,3 +18,4 @@ TODO
 
 
 
+Przeanalizuj dokładnie kod pod kątem optymalizacji, martwego kodu, over engineringu, bezpieczeństwa. Przygotuj szczegółowy raport poprawki.md

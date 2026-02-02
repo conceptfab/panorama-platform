@@ -17,6 +17,32 @@ export async function readJsonFile<T>(filename: string): Promise<T> {
   }
 }
 
+/**
+ * Odczytuje plik JSON lub tworzy go z domyślną zawartością, jeśli nie istnieje.
+ * Dzięki temu aplikacja nie wywala się przy pierwszym uruchomieniu (brak init-data).
+ */
+export async function readJsonFileWithDefault<T>(
+  filename: string,
+  defaultData: T
+): Promise<T> {
+  const filePath = path.join(DATA_DIR, filename);
+  try {
+    const content = await fs.readFile(filePath, 'utf-8');
+    return JSON.parse(content) as T;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      await ensureDir(DATA_DIR);
+      await fs.writeFile(
+        filePath,
+        JSON.stringify(defaultData, null, 2),
+        'utf-8'
+      );
+      return defaultData;
+    }
+    throw error;
+  }
+}
+
 export async function writeJsonFile<T>(
   filename: string,
   data: T
