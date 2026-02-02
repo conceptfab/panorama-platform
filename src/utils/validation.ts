@@ -40,9 +40,15 @@ export const accessRuleSchema = z.object({
   notes: z.string(),
 });
 
+const pendingRequestSchema = z.object({
+  email: z.string().email(),
+  requestedAt: z.string(),
+});
+
 export const accessControlSchema = z.object({
   whitelist: z.array(accessRuleSchema),
   blacklist: z.array(accessRuleSchema),
+  pending: z.array(pendingRequestSchema).optional(),
 });
 
 // Project validation

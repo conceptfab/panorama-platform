@@ -26,7 +26,8 @@ const RESEND_TEST_RECIPIENT = (process.env.RESEND_TEST_RECIPIENT ?? '')
 
 export async function sendOTPEmail(
   email: string,
-  code: string
+  code: string,
+  options?: { isAdmin?: boolean }
 ): Promise<{ success: boolean; error?: string }> {
   const isTestSender = process.env.EMAIL_FROM_USE_RESEND_TEST === 'true';
   const toLower = email.trim().toLowerCase();
@@ -43,12 +44,15 @@ export async function sendOTPEmail(
   }
 
   const appVersion = process.env.NEXT_PUBLIC_APP_VERSION ?? '0.0.0';
+  const subjectBase = `Kod logowania - CONCEPTFAB Pano v: ${appVersion}`;
+  const subject = options?.isAdmin ? `[Admin] ${subjectBase}` : subjectBase;
+
   try {
     const { error } = await resend.emails.send({
       from: getEmailFrom(),
       to: email,
-      subject: `Kod logowania - CONCEPTFAB Pano v: ${appVersion}`,
-      html: getOTPEmailTemplate(code, appVersion),
+      subject,
+      html: getOTPEmailTemplate(code, appVersion, options?.isAdmin),
     });
 
     if (error) {

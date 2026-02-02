@@ -1,24 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { loginSchema } from '@/utils/validation';
-import { isEmailAllowed } from '@/lib/auth/access-control';
+import {
+  isEmailAllowed,
+  addToPending,
+  getAccessControl,
+} from '@/lib/auth/access-control';
+import { matchEmailPattern } from '@/utils/helpers';
 import { generateOTP, storeOTP } from '@/lib/auth/otp';
 import { sendOTPEmail } from '@/lib/email/resend';
+import { getUserByEmail } from '@/lib/db/users';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { email } = loginSchema.parse(body);
 
-    // Check access control
     const allowed = await isEmailAllowed(email);
     if (!allowed) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: 'Ten adres email nie ma dostępu do systemu',
-        },
-        { status: 403 }
+      const { blacklist } = await getAccessControl();
+      const isBlacklisted = blacklist.some(
+        (r) => r.isActive && matchEmailPattern(email, r.pattern)
       );
+      if (isBlacklisted) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: 'Ten adres email nie ma dostępu do systemu',
+          },
+          { status: 403 }
+        );
+      }
+      // Nie na whitelist, nie na blacklist = poczekalnia
+      await addToPending(email);
+      return NextResponse.json({
+        success: true,
+        waitingApproval: true,
+        message:
+          'Zgłoszenie przyjęte. Czekasz na zatwierdzenie przez administratora. Otrzymasz maila z kodem po zatwierdzeniu.',
+      });
     }
 
     // Generate 6-digit OTP code
@@ -30,8 +49,11 @@ export async function POST(request: NextRequest) {
       console.log('[LOGIN OTP]', email, '→ kod:', code);
     }
 
-    // Send email with code
-    const result = await sendOTPEmail(email, code);
+    // Send email with code (tytuł z [Admin] gdy odbiorca ma rolę admin)
+    const user = await getUserByEmail(email);
+    const result = await sendOTPEmail(email, code, {
+      isAdmin: user?.role === 'admin',
+    });
 
     if (!result.success) {
       const fallback =

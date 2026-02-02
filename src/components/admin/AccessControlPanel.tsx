@@ -7,20 +7,54 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface AccessControlPanelProps {
   accessControl: AccessControl;
 }
 
-export function AccessControlPanel({ accessControl: initialData }: AccessControlPanelProps) {
+export function AccessControlPanel({
+  accessControl: initialData,
+}: AccessControlPanelProps) {
   const [accessControl, setAccessControl] = useState(initialData);
   const [newWhitelistPattern, setNewWhitelistPattern] = useState('');
   const [newBlacklistPattern, setNewBlacklistPattern] = useState('');
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
+
+  const pending = accessControl.pending ?? [];
+
+  const handlePendingAction = async (
+    email: string,
+    action: 'approve' | 'reject'
+  ) => {
+    setPendingAction(email);
+    try {
+      const res = await fetch('/api/access-control/pending', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, action }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Błąd');
+
+      setAccessControl((prev) => ({
+        ...prev,
+        pending: (prev.pending ?? []).filter(
+          (p) => p.email.toLowerCase() !== email.toLowerCase()
+        ),
+      }));
+      toast.success(data.message);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Nie udało się');
+    } finally {
+      setPendingAction(null);
+    }
+  };
 
   const handleAddRule = async (type: 'whitelist' | 'blacklist') => {
-    const pattern = type === 'whitelist' ? newWhitelistPattern : newBlacklistPattern;
+    const pattern =
+      type === 'whitelist' ? newWhitelistPattern : newBlacklistPattern;
     if (!pattern.trim()) {
       toast.error('Podaj wzorzec');
       return;
@@ -53,7 +87,10 @@ export function AccessControlPanel({ accessControl: initialData }: AccessControl
     }
   };
 
-  const handleDeleteRule = async (id: string, type: 'whitelist' | 'blacklist') => {
+  const handleDeleteRule = async (
+    id: string,
+    type: 'whitelist' | 'blacklist'
+  ) => {
     try {
       const res = await fetch(`/api/access-control/${id}`, {
         method: 'DELETE',
@@ -119,8 +156,11 @@ export function AccessControlPanel({ accessControl: initialData }: AccessControl
         <CardTitle>Kontrola dostępu</CardTitle>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="whitelist">
+        <Tabs defaultValue="pending">
           <TabsList className="mb-4">
+            <TabsTrigger value="pending">
+              Poczekalnia ({pending.length})
+            </TabsTrigger>
             <TabsTrigger value="whitelist">
               Whitelist ({accessControl.whitelist.length})
             </TabsTrigger>
@@ -128,6 +168,53 @@ export function AccessControlPanel({ accessControl: initialData }: AccessControl
               Blacklist ({accessControl.blacklist.length})
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="pending" className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Osoby, które poprosiły o dostęp – zatwierdź, aby wysłać im kod
+              logowania.
+            </p>
+            <div className="space-y-2">
+              {pending.map((req) => (
+                <div
+                  key={req.email}
+                  className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                >
+                  <div>
+                    <span className="font-medium">{req.email}</span>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Prośba:{' '}
+                      {new Date(req.requestedAt).toLocaleString('pl-PL')}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => handlePendingAction(req.email, 'approve')}
+                      disabled={pendingAction === req.email}
+                    >
+                      <Check className="h-4 w-4 mr-1" />
+                      Zatwierdź
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handlePendingAction(req.email, 'reject')}
+                      disabled={pendingAction === req.email}
+                    >
+                      <X className="h-4 w-4 mr-1" />
+                      Odrzuć
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              {pending.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Brak osób w poczekalni
+                </p>
+              )}
+            </div>
+          </TabsContent>
 
           <TabsContent value="whitelist" className="space-y-4">
             <div className="flex gap-2">
@@ -161,8 +248,8 @@ export function AccessControlPanel({ accessControl: initialData }: AccessControl
         </Tabs>
 
         <p className="text-xs text-muted-foreground mt-4">
-          Użyj <code>*</code> jako wildcard. Przykłady: <code>*@firma.com</code>,{' '}
-          <code>jan@*</code>, <code>*</code> (wszyscy)
+          Użyj <code>*</code> jako wildcard. Przykłady: <code>*@firma.com</code>
+          , <code>jan@*</code>, <code>*</code> (wszyscy)
         </p>
       </CardContent>
     </Card>

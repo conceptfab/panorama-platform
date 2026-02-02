@@ -5,16 +5,7 @@ TODO
 - pliki do zawsze webP
 - system zapisywania danych / statystyk uzytkowników JSON - pliki 24H
 
-
-
-- dysk na Railway
-- manadżer plików, delete, download, upload, backup projektów, dodawanie/upload gotowych projektów
-
-
-- 
-
-- pliki do zawsze webP
-- system zapisywania danych / statystyk JSON - pliki 24H
+- poprawki UI
 
 
 

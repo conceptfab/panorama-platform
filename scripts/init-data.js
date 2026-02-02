@@ -39,9 +39,19 @@ const defaultProjects = {
   projects: [],
 };
 
+const adminEmail = process.env.ADMIN_EMAIL || 'admin@example.com';
 const defaultAccessControl = {
-  whitelist: [],
+  whitelist: [
+    {
+      id: 'wl-admin',
+      pattern: adminEmail,
+      isActive: true,
+      createdAt: new Date().toISOString(),
+      notes: 'Konto admina (init)',
+    },
+  ],
   blacklist: [],
+  pending: [],
 };
 
 // Simple password hash (same as in the app)

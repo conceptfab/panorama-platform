@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 // Routes that require authentication
-const protectedRoutes = ['/gallery', '/viewer', '/admin'];
+const protectedRoutes = ['/gallery', '/pano', '/admin'];
 // Routes that should redirect authenticated users
 const authRoutes = ['/login'];
 

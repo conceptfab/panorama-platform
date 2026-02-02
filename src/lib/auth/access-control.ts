@@ -1,13 +1,17 @@
 import { readJsonFileWithDefault, writeJsonFile } from '../db/json-store';
-import { AccessControl, AccessRule } from '@/types';
+import { AccessControl, AccessRule, PendingAccessRequest } from '@/types';
 import { generateId, formatDate, matchEmailPattern } from '@/utils/helpers';
 import { accessControlSchema } from '@/utils/validation';
+import { generateOTP, storeOTP } from '@/lib/auth/otp';
+import { sendOTPEmail } from '@/lib/email/resend';
+import { getUserByEmail } from '@/lib/db/users';
 
 const ACCESS_CONTROL_FILE = 'access-control.json';
 
 const DEFAULT_ACCESS_CONTROL: AccessControl = {
   whitelist: [],
   blacklist: [],
+  pending: [],
 };
 
 export async function getAccessControl(): Promise<AccessControl> {
@@ -15,26 +19,28 @@ export async function getAccessControl(): Promise<AccessControl> {
     ACCESS_CONTROL_FILE,
     DEFAULT_ACCESS_CONTROL
   );
-  return accessControlSchema.parse(data);
+  const pending: PendingAccessRequest[] = Array.isArray(data.pending)
+    ? data.pending
+    : [];
+  const normalized = {
+    whitelist: data.whitelist,
+    blacklist: data.blacklist,
+    pending,
+  } as AccessControl;
+  return accessControlSchema.parse(normalized) as AccessControl;
 }
 
+/** Tylko osoby na whitelist mają dostęp. Pusta whitelist = nikt nie dostaje kodu (idą do poczekalni). */
 export async function isEmailAllowed(email: string): Promise<boolean> {
   const { whitelist, blacklist } = await getAccessControl();
 
-  // Check blacklist first
   for (const rule of blacklist) {
     if (rule.isActive && matchEmailPattern(email, rule.pattern)) {
       return false;
     }
   }
 
-  // If whitelist is empty, allow all (that aren't blacklisted)
   const activeWhitelist = whitelist.filter((r) => r.isActive);
-  if (activeWhitelist.length === 0) {
-    return true;
-  }
-
-  // Check whitelist
   for (const rule of activeWhitelist) {
     if (matchEmailPattern(email, rule.pattern)) {
       return true;
@@ -42,6 +48,47 @@ export async function isEmailAllowed(email: string): Promise<boolean> {
   }
 
   return false;
+}
+
+export async function addToPending(email: string): Promise<void> {
+  const data = await getAccessControl();
+  const normalized = email.toLowerCase().trim();
+  if (data.pending.some((p) => p.email.toLowerCase() === normalized)) {
+    return;
+  }
+  data.pending.push({
+    email: normalized,
+    requestedAt: formatDate(new Date()),
+  });
+  await writeJsonFile(ACCESS_CONTROL_FILE, data);
+}
+
+export async function removeFromPending(email: string): Promise<boolean> {
+  const data = await getAccessControl();
+  const normalized = email.toLowerCase().trim();
+  const before = data.pending.length;
+  data.pending = data.pending.filter(
+    (p) => p.email.toLowerCase() !== normalized
+  );
+  if (data.pending.length === before) return false;
+  await writeJsonFile(ACCESS_CONTROL_FILE, data);
+  return true;
+}
+
+/** Zatwierdź: dodaj do whitelist, wyślij kod na email, usuń z poczekalni. */
+export async function approvePending(
+  email: string
+): Promise<{ sent: boolean }> {
+  const normalized = email.toLowerCase().trim();
+  await addToWhitelist(normalized, 'Zatwierdzony z poczekalni');
+  const code = generateOTP();
+  await storeOTP(normalized, code);
+  const user = await getUserByEmail(normalized);
+  const result = await sendOTPEmail(normalized, code, {
+    isAdmin: user?.role === 'admin',
+  });
+  await removeFromPending(normalized);
+  return { sent: result.success };
 }
 
 export async function addToWhitelist(

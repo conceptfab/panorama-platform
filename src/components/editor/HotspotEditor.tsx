@@ -61,6 +61,9 @@ export function HotspotEditor({
   const markerRef = useRef<unknown>(null);
   const isAddingModeRef = useRef(false);
   const configRef = useRef(initialConfig);
+  const hotspotMarkersRef = useRef<unknown[]>([]);
+  const existingHotspotTextureRef = useRef<unknown>(null);
+  const currentPanoramaIndexRef = useRef(0);
 
   // Keep refs in sync with state
   useEffect(() => {
@@ -70,6 +73,10 @@ export function HotspotEditor({
   useEffect(() => {
     configRef.current = config;
   }, [config]);
+
+  useEffect(() => {
+    currentPanoramaIndexRef.current = currentPanoramaIndex;
+  }, [currentPanoramaIndex]);
 
   const currentPanorama = config.panoramas[currentPanoramaIndex];
   const selectedHotspot = currentPanorama?.hotspots.find(
@@ -115,6 +122,71 @@ export function HotspotEditor({
     return texture;
   }, []);
 
+  // Tekstura znacznika istniejącego hotspota (cyjan, żeby odróżnić od czerwonego „nowego”)
+  const createExistingHotspotTexture = useCallback(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d')!;
+    ctx.beginPath();
+    ctx.arc(32, 32, 26, 0, Math.PI * 2);
+    ctx.strokeStyle = '#22d3ee';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(32, 32, 10, 0, Math.PI * 2);
+    ctx.fillStyle = '#22d3ee';
+    ctx.fill();
+    return new window.THREE.CanvasTexture(canvas);
+  }, []);
+
+  // Usuń znaczniki istniejących hotspotów ze sceny i zwolnij zasoby
+  const clearHotspotMarkers = useCallback(
+    (viewer: { scene: { remove: (o: unknown) => void } }) => {
+      for (const m of hotspotMarkersRef.current) {
+        viewer.scene.remove(m);
+        const sprite = m as {
+          material?: { map?: { dispose: () => void }; dispose: () => void };
+        };
+        sprite.material?.map?.dispose?.();
+        sprite.material?.dispose?.();
+      }
+      hotspotMarkersRef.current = [];
+      const tex = existingHotspotTextureRef.current as {
+        dispose?: () => void;
+      } | null;
+      if (tex?.dispose) {
+        tex.dispose();
+        existingHotspotTextureRef.current = null;
+      }
+    },
+    []
+  );
+
+  // Dodaj znaczniki dla istniejących hotspotów na panoramie
+  const addHotspotMarkers = useCallback(
+    (viewer: { scene: { add: (o: unknown) => void } }, hotspots: Hotspot[]) => {
+      if (!hotspots?.length || !window.THREE) return;
+      const THREE = window.THREE;
+      const texture = createExistingHotspotTexture();
+      existingHotspotTextureRef.current = texture;
+      for (const hp of hotspots) {
+        const mat = new THREE.SpriteMaterial({
+          map: texture,
+          depthTest: false,
+          transparent: true,
+        });
+        const sprite = new THREE.Sprite(mat);
+        sprite.scale.set(250, 250, 1);
+        // Konwersja jak przy zapisie: config ma (-pt.x, pt.y, pt.z)
+        sprite.position.set(-hp.position.x, hp.position.y, hp.position.z);
+        viewer.scene.add(sprite);
+        hotspotMarkersRef.current.push(sprite);
+      }
+    },
+    [createExistingHotspotTexture]
+  );
+
   // Load single panorama
   const loadPanorama = useCallback(
     (index: number) => {
@@ -125,15 +197,23 @@ export function HotspotEditor({
         remove?: (p: unknown) => void;
         setPanorama?: (p: unknown) => void;
         tweenControlCenter?: (v: unknown, d: number) => void;
+        scene?: { remove: (o: unknown) => void; add: (o: unknown) => void };
         camera?: unknown;
         panorama?: unknown;
       };
-      if (!viewer) return;
+      if (!viewer?.scene) return;
+
+      const viewerWithScene = viewer as {
+        scene: { remove: (o: unknown) => void; add: (o: unknown) => void };
+      };
 
       setIsLoading(true);
 
       const THREE = window.THREE;
       const PANOLENS = window.PANOLENS;
+
+      // Usuń stare znaczniki hotspotów
+      clearHotspotMarkers(viewerWithScene);
 
       // Remove old panorama
       if (currentPanoramaRef.current) {
@@ -157,6 +237,7 @@ export function HotspotEditor({
           new THREE.Vector3(pos.x, pos.y, pos.z),
           400
         );
+        addHotspotMarkers(viewerWithScene, panoData.hotspots ?? []);
         setIsLoading(false);
       });
 
@@ -164,7 +245,7 @@ export function HotspotEditor({
       viewer.add?.(panorama);
       viewer.setPanorama?.(panorama);
     },
-    [basePath]
+    [basePath, clearHotspotMarkers, addHotspotMarkers]
   );
 
   const initViewer = useCallback(() => {
@@ -236,6 +317,22 @@ export function HotspotEditor({
     }
   }, [scriptsLoaded, initViewer]);
 
+  // Po zmianie config (dodanie/usunięcie hotspota) odśwież znaczniki na panoramie
+  useEffect(() => {
+    const viewer = viewerRef.current as {
+      scene?: { remove: (o: unknown) => void; add: (o: unknown) => void };
+    } | null;
+    if (!viewer?.scene) return;
+    const viewerWithScene = viewer as {
+      scene: { remove: (o: unknown) => void; add: (o: unknown) => void };
+    };
+    const idx = currentPanoramaIndexRef.current;
+    const pano = configRef.current.panoramas[idx];
+    if (!pano) return;
+    clearHotspotMarkers(viewerWithScene);
+    addHotspotMarkers(viewerWithScene, pano.hotspots ?? []);
+  }, [config, clearHotspotMarkers, addHotspotMarkers]);
+
   useEffect(() => {
     return () => {
       if (currentPanoramaRef.current) {
@@ -264,12 +361,13 @@ export function HotspotEditor({
       return;
     }
 
+    const nextNumber = (currentPanorama?.hotspots.length ?? 0) + 1;
     const newHotspot: Hotspot = {
       id: generateId('hs'),
       type: 'link',
       position: clickedPosition,
       target: config.panoramas[0]?.id || '',
-      title: 'Nowy hotspot',
+      title: `Hotspot ${nextNumber}`,
       icon: 'arrow-up',
       scale: 1.0,
     };

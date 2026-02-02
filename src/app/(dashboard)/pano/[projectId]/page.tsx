@@ -8,7 +8,7 @@ interface PageProps {
   params: Promise<{ projectId: string }>;
 }
 
-export default async function ViewerPage({ params }: PageProps) {
+export default async function PanoPage({ params }: PageProps) {
   const session = await getSession();
   if (!session) {
     notFound();
@@ -40,7 +40,9 @@ export default async function ViewerPage({ params }: PageProps) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
-          <p className="text-muted-foreground">Ten projekt nie ma jeszcze panoram</p>
+          <p className="text-muted-foreground">
+            Ten projekt nie ma jeszcze panoram
+          </p>
         </div>
       </div>
     );

@@ -13,7 +13,7 @@ interface ProjectThumbnailProps {
 
 export function ProjectThumbnail({ project }: ProjectThumbnailProps) {
   return (
-    <Link href={`/viewer/${project.id}`}>
+    <Link href={`/pano/${project.id}`}>
       <Card className="group overflow-hidden transition-all hover:shadow-lg hover:border-primary/50">
         <div className="relative aspect-video bg-zinc-100 dark:bg-zinc-800">
           {project.thumbnailUrl ? (
@@ -33,7 +33,9 @@ export function ProjectThumbnail({ project }: ProjectThumbnailProps) {
           </div>
         </div>
         <CardHeader className="p-4 pb-2">
-          <CardTitle className="text-base line-clamp-1">{project.name}</CardTitle>
+          <CardTitle className="text-base line-clamp-1">
+            {project.name}
+          </CardTitle>
         </CardHeader>
         <CardContent className="p-4 pt-0">
           <div className="flex items-center justify-between">

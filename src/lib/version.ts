@@ -8,4 +8,4 @@ export const APP_VERSION =
 export const PANO_VERSION_LABEL = `Pano v: ${APP_VERSION}`;
 
 /** Etykieta "CONCEPTFAB Pano v: x.y.z". */
-export const PANO_VIEWER_VERSION_LABEL = `CONCEPTFAB Pano v: ${APP_VERSION}`;
+export const CONCEPTFAB_PANO_VERSION_LABEL = `CONCEPTFAB Pano v: ${APP_VERSION}`;

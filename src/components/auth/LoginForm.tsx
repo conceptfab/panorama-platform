@@ -50,11 +50,21 @@ export function LoginForm() {
       const data = await res.json();
 
       if (data.success) {
-        setStep('code');
-        setMessage({
-          type: 'success',
-          text: 'Kod został wysłany na podany adres email',
-        });
+        if (data.waitingApproval) {
+          setMessage({
+            type: 'success',
+            text:
+              data.message ??
+              'Czekasz na zatwierdzenie przez administratora. Otrzymasz maila z kodem po zatwierdzeniu.',
+          });
+          // Zostajemy na kroku email – bez kodu
+        } else {
+          setStep('code');
+          setMessage({
+            type: 'success',
+            text: 'Kod został wysłany na podany adres email',
+          });
+        }
       } else {
         setMessage({ type: 'error', text: data.message });
       }

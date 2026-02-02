@@ -58,7 +58,9 @@ export function ProjectCard({ project }: ProjectCardProps) {
       <CardHeader className="p-4 pb-2">
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
-            <CardTitle className="text-lg line-clamp-1">{project.name}</CardTitle>
+            <CardTitle className="text-lg line-clamp-1">
+              {project.name}
+            </CardTitle>
             <CardDescription className="line-clamp-2 mt-1">
               {project.description || 'Brak opisu'}
             </CardDescription>
@@ -71,7 +73,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem asChild>
-                <Link href={`/viewer/${project.id}`}>
+                <Link href={`/pano/${project.id}`}>
                   <Eye className="h-4 w-4 mr-2" />
                   Podgląd
                 </Link>

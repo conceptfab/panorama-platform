@@ -27,9 +27,17 @@ export interface AccessRule {
   notes: string;
 }
 
+/** Jedna prośba o dostęp (poczekalnia – czeka na zatwierdzenie przez admina). */
+export interface PendingAccessRequest {
+  email: string;
+  requestedAt: string;
+}
+
 export interface AccessControl {
   whitelist: AccessRule[];
   blacklist: AccessRule[];
+  /** Osoby, które poprosiły o dostęp – admin musi zatwierdzić, wtedy dostaną kod. */
+  pending: PendingAccessRequest[];
 }
 
 export interface UsersData {

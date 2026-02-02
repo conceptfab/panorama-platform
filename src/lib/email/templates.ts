@@ -1,16 +1,18 @@
 export function getOTPEmailTemplate(
   code: string,
-  version: string = '0.0.0'
+  version: string = '0.0.0',
+  isAdmin?: boolean
 ): string {
-  const viewerLabel = `CONCEPTFAB Pano v: ${version}`;
-  const viewerLabelHtml = `CONCEPTFAB Pano <span style="font-size: 10px;">v: ${version}</span>`;
+  const titleBase = `Kod logowania - CONCEPTFAB Pano v: ${version}`;
+  const emailTitle = isAdmin ? `[Admin] ${titleBase}` : titleBase;
+  const productLineHtml = `Pano <span style="font-size: 10px;">v: ${version}</span>`;
   return `
 <!DOCTYPE html>
 <html lang="pl">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kod logowania - ${viewerLabel}</title>
+  <title>${emailTitle}</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f4f4f5;">
   <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f4f4f5;">
@@ -20,7 +22,7 @@ export function getOTPEmailTemplate(
           <tr>
             <td style="padding: 40px 32px;">
               <h1 style="margin: 0 0 24px 0; font-size: 24px; font-weight: 600; color: #18181b; text-align: center;">
-                <span style="font-size: 70%;">CONCEPTFAB</span><br><span style="font-size: 91%;">${viewerLabelHtml}</span>
+                <span style="font-size: 70%;">CONCEPTFAB</span><br><span style="font-size: 91%;">${productLineHtml}</span>
               </h1>
 
               <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 24px; color: #52525b; text-align: center;">
