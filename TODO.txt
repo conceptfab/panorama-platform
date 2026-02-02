@@ -6,7 +6,7 @@ TODO
 - system zapisywania danych / statystyk uzytkowników JSON - pliki 24H
 - poprawki UI - ikonki 
 - 3 rodzaje wielkosci ikon projektów, w najwieszkym rozmiarze ikony edycji
-
-
+- trwałosc ciastka???
+- podział na grupy w galerii projektów
 
 Przeanalizuj dokładnie kod pod kątem optymalizacji, martwego kodu, over engineringu, bezpieczeństwa. Przygotuj szczegółowy raport poprawki.md

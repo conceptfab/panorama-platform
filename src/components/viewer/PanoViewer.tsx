@@ -268,12 +268,27 @@ export function PanoViewer({
   }, []);
 
   const handleHome = useCallback(() => {
-    const viewer = viewerRef.current as { setPanorama?: (p: unknown) => void };
+    const viewer = viewerRef.current as {
+      setPanorama: (p: unknown) => void;
+      tweenControlCenter?: (
+        v: { x: number; y: number; z: number },
+        ms: number
+      ) => void;
+    } | null;
     const panoramas = panoramasRef.current;
-    if (viewer?.setPanorama && panoramas[0]) {
-      viewer.setPanorama(panoramas[0]);
+    const firstPanorama = panoramas[0];
+    if (!viewer || !firstPanorama || !window.THREE) return;
+    viewer.setPanorama(firstPanorama);
+    const pos = config.panoramas[0]?.initialPosition;
+    if (pos && viewer.tweenControlCenter) {
+      requestAnimationFrame(() => {
+        viewer.tweenControlCenter!(
+          new window.THREE.Vector3(pos.x, pos.y, pos.z),
+          800
+        );
+      });
     }
-  }, []);
+  }, [config.panoramas]);
 
   const handleScreenshot = useCallback(() => {
     const container = containerRef.current;

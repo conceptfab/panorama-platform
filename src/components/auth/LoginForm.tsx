@@ -183,9 +183,8 @@ export function LoginForm() {
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader className="text-center">
-        <CardTitle className="text-2xl font-semibold">
-          <span className="text-[0.7em]">CONCEPTFAB</span>
-          <br />
+        <CardTitle className="text-2xl font-semibold whitespace-nowrap">
+          <span className="text-[0.7em]">CONCEPTFAB</span>{' '}
           <span className="text-[0.91em] font-normal text-muted-foreground">
             Pano{' '}
             <span className="text-[10px]">
