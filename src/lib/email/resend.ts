@@ -45,6 +45,14 @@ async function sendViaSMTP(
     port,
     secure,
     auth: user && pass ? { user, pass } : undefined,
+    connectionTimeout: 20000,
+    greetingTimeout: 20000,
+    // Port 587 zwykle używa STARTTLS
+    requireTLS: port === 587,
+    tls:
+      port === 587
+        ? { rejectUnauthorized: true, minVersion: 'TLSv1.2' as const }
+        : undefined,
   });
 
   try {
