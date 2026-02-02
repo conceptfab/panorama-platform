@@ -1,10 +1,9 @@
 import { Resend } from 'resend';
-import nodemailer from 'nodemailer';
 import { getOTPEmailTemplate } from './templates';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Nadawca: "Name <email@domain.com>". Dla SMTP używany jest EMAIL_FROM.
+// Nadawca: "Name <email@domain.com>". Set EMAIL_FROM_USE_RESEND_TEST=true tylko do testów (wysyłka tylko na adres konta Resend).
 function getEmailFrom(): string {
   if (process.env.EMAIL_FROM_USE_RESEND_TEST === 'true') {
     return 'ConceptFab Panorama <onboarding@resend.dev>';
@@ -25,54 +24,7 @@ const RESEND_TEST_RECIPIENT = (process.env.RESEND_TEST_RECIPIENT ?? '')
   .trim()
   .toLowerCase();
 
-function useSMTP(): boolean {
-  return Boolean(process.env.SMTP_HOST?.trim());
-}
-
-async function sendViaSMTP(
-  email: string,
-  code: string
-): Promise<{ success: boolean; error?: string }> {
-  const host = process.env.SMTP_HOST?.trim();
-  const port = parseInt(process.env.SMTP_PORT ?? '587', 10);
-  const secure = process.env.SMTP_SECURE === 'true';
-  const user = process.env.SMTP_USER?.trim();
-  const pass = process.env.SMTP_PASS?.trim();
-  const from = getEmailFrom();
-
-  const transporter = nodemailer.createTransport({
-    host,
-    port,
-    secure,
-    auth: user && pass ? { user, pass } : undefined,
-    connectionTimeout: 20000,
-    greetingTimeout: 20000,
-    // Port 587 zwykle używa STARTTLS
-    requireTLS: port === 587,
-    tls:
-      port === 587
-        ? { rejectUnauthorized: true, minVersion: 'TLSv1.2' as const }
-        : undefined,
-  });
-
-  try {
-    await transporter.sendMail({
-      from,
-      to: email,
-      subject: 'Kod logowania - Panorama Viewer',
-      html: getOTPEmailTemplate(code),
-    });
-    return { success: true };
-  } catch (error) {
-    console.error('SMTP send error:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
-  }
-}
-
-async function sendViaResend(
+export async function sendOTPEmail(
   email: string,
   code: string
 ): Promise<{ success: boolean; error?: string }> {
@@ -105,20 +57,10 @@ async function sendViaResend(
 
     return { success: true };
   } catch (error) {
-    console.error('Resend send error:', error);
+    console.error('Email send error:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
-}
-
-export async function sendOTPEmail(
-  email: string,
-  code: string
-): Promise<{ success: boolean; error?: string }> {
-  if (useSMTP()) {
-    return sendViaSMTP(email, code);
-  }
-  return sendViaResend(email, code);
 }

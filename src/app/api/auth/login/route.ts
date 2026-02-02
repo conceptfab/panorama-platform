@@ -13,7 +13,10 @@ export async function POST(request: NextRequest) {
     const allowed = await isEmailAllowed(email);
     if (!allowed) {
       return NextResponse.json(
-        { success: false, message: 'Ten adres email nie ma dostępu do systemu' },
+        {
+          success: false,
+          message: 'Ten adres email nie ma dostępu do systemu',
+        },
         { status: 403 }
       );
     }
@@ -45,7 +48,11 @@ export async function POST(request: NextRequest) {
       }
       console.error('Failed to send OTP:', result.error);
       return NextResponse.json(
-        { success: false, message: result.error || 'Nie udało się wysłać emaila. Spróbuj ponownie.' },
+        {
+          success: false,
+          message:
+            result.error || 'Nie udało się wysłać emaila. Spróbuj ponownie.',
+        },
         { status: 500 }
       );
     }
