@@ -22,10 +22,27 @@ export async function POST(request: NextRequest) {
     const code = generateOTP();
     storeOTP(email, code);
 
+    const isDev = process.env.NODE_ENV === 'development';
+    if (isDev) {
+      console.log('[LOGIN OTP]', email, '→ kod:', code);
+    }
+
     // Send email with code
     const result = await sendOTPEmail(email, code);
 
     if (!result.success) {
+      const fallback =
+        isDev || process.env.OTP_ACCEPT_ON_SEND_FAILURE === 'true';
+      if (fallback) {
+        console.log('[LOGIN OTP]', email, '→ kod:', code);
+        console.warn(
+          '[LOGIN] Wysyłka maila nie powiodła się – kod w konsoli powyżej. Użyj go do logowania.'
+        );
+        return NextResponse.json({
+          success: true,
+          message: 'Kod weryfikacyjny został wysłany na podany adres email',
+        });
+      }
       console.error('Failed to send OTP:', result.error);
       return NextResponse.json(
         { success: false, message: result.error || 'Nie udało się wysłać emaila. Spróbuj ponownie.' },

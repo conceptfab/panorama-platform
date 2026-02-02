@@ -1,9 +1,10 @@
 import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 import { getOTPEmailTemplate } from './templates';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Resend: "Name <email@domain.com>". Set EMAIL_FROM_USE_RESEND_TEST=true to use onboarding@resend.dev (no domain verification needed).
+// Nadawca: "Name <email@domain.com>". Dla SMTP używany jest EMAIL_FROM.
 function getEmailFrom(): string {
   if (process.env.EMAIL_FROM_USE_RESEND_TEST === 'true') {
     return 'ConceptFab Panorama <onboarding@resend.dev>';
@@ -20,12 +21,50 @@ function getEmailFrom(): string {
     : `ConceptFab Panorama <${raw}>`;
 }
 
-// W trybie testowym Resend (onboarding@resend.dev) można wysyłać tylko na adres konta Resend.
 const RESEND_TEST_RECIPIENT = (process.env.RESEND_TEST_RECIPIENT ?? '')
   .trim()
   .toLowerCase();
 
-export async function sendOTPEmail(
+function useSMTP(): boolean {
+  return Boolean(process.env.SMTP_HOST?.trim());
+}
+
+async function sendViaSMTP(
+  email: string,
+  code: string
+): Promise<{ success: boolean; error?: string }> {
+  const host = process.env.SMTP_HOST?.trim();
+  const port = parseInt(process.env.SMTP_PORT ?? '587', 10);
+  const secure = process.env.SMTP_SECURE === 'true';
+  const user = process.env.SMTP_USER?.trim();
+  const pass = process.env.SMTP_PASS?.trim();
+  const from = getEmailFrom();
+
+  const transporter = nodemailer.createTransport({
+    host,
+    port,
+    secure,
+    auth: user && pass ? { user, pass } : undefined,
+  });
+
+  try {
+    await transporter.sendMail({
+      from,
+      to: email,
+      subject: 'Kod logowania - Panorama Viewer',
+      html: getOTPEmailTemplate(code),
+    });
+    return { success: true };
+  } catch (error) {
+    console.error('SMTP send error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+async function sendViaResend(
   email: string,
   code: string
 ): Promise<{ success: boolean; error?: string }> {
@@ -58,10 +97,20 @@ export async function sendOTPEmail(
 
     return { success: true };
   } catch (error) {
-    console.error('Email send error:', error);
+    console.error('Resend send error:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
+}
+
+export async function sendOTPEmail(
+  email: string,
+  code: string
+): Promise<{ success: boolean; error?: string }> {
+  if (useSMTP()) {
+    return sendViaSMTP(email, code);
+  }
+  return sendViaResend(email, code);
 }
