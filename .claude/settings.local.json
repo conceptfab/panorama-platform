@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(npm run build:*)",
-      "Bash(npm run check-deploy:*)"
+      "Bash(npm run check-deploy:*)",
+      "Bash(curl:*)"
     ]
   }
 }

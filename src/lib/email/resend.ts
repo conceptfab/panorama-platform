@@ -32,7 +32,11 @@ export async function sendOTPEmail(
   const isTestSender = process.env.EMAIL_FROM_USE_RESEND_TEST === 'true';
   const toLower = email.trim().toLowerCase();
 
-  if (isTestSender && RESEND_TEST_RECIPIENT && toLower !== RESEND_TEST_RECIPIENT) {
+  if (
+    isTestSender &&
+    RESEND_TEST_RECIPIENT &&
+    toLower !== RESEND_TEST_RECIPIENT
+  ) {
     return {
       success: false,
       error: `W trybie testowym kod można wysłać tylko na adres ${RESEND_TEST_RECIPIENT}. Wpisz ten adres na stronie logowania lub zweryfikuj domenę w Resend (resend.com/domains) i wyłącz EMAIL_FROM_USE_RESEND_TEST w .env.local.`,

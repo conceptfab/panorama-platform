@@ -7,9 +7,7 @@
       "isActive": true,
       "createdAt": "2026-01-01T00:00:00Z",
       "lastLoginAt": "2026-02-02T14:34:09.607Z",
-      "groupIds": [
-        "group-001"
-      ]
+      "groupIds": ["group-001"]
     }
   ]
 }

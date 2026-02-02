@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { verifyOTP } from '@/lib/auth/otp';
 import { createSession } from '@/lib/auth/session';
-import { getUsers, getUserByEmail, createUser, updateUserLastLogin } from '@/lib/db/users';
+import {
+  getUsers,
+  getUserByEmail,
+  createUser,
+  updateUserLastLogin,
+} from '@/lib/db/users';
 
 const verifySchema = z.object({
   email: z.string().email(),
