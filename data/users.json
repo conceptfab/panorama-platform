@@ -10,6 +10,17 @@
       "groupIds": [
         "group-001"
       ]
+    },
+    {
+      "id": "user-0c5f15f3",
+      "email": "micz@kleniewski.com",
+      "role": "user",
+      "isActive": true,
+      "createdAt": "2026-02-02T19:23:51.551Z",
+      "lastLoginAt": "2026-02-02T19:23:51.554Z",
+      "groupIds": [
+        "group-f3efd3df"
+      ]
     }
   ]
 }

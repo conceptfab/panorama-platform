@@ -16,19 +16,24 @@ import {
 } from '@/components/ui/dialog';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface GroupManagerProps {
   groups: Group[];
   projects: Project[];
 }
 
-export function GroupManager({ groups: initialGroups, projects }: GroupManagerProps) {
+export function GroupManager({
+  groups: initialGroups,
+  projects,
+}: GroupManagerProps) {
   const [groups, setGroups] = useState(initialGroups);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingGroup, setEditingGroup] = useState<Group | null>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [color, setColor] = useState('#6b7280');
+  const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
 
   const getProjectNames = (projectIds: string[]) => {
     return projectIds
@@ -42,13 +47,23 @@ export function GroupManager({ groups: initialGroups, projects }: GroupManagerPr
       setName(group.name);
       setDescription(group.description);
       setColor(group.color);
+      setSelectedProjectIds([...group.projectIds]);
     } else {
       setEditingGroup(null);
       setName('');
       setDescription('');
       setColor('#6b7280');
+      setSelectedProjectIds([]);
     }
     setIsDialogOpen(true);
+  };
+
+  const toggleProject = (projectId: string) => {
+    setSelectedProjectIds((prev) =>
+      prev.includes(projectId)
+        ? prev.filter((id) => id !== projectId)
+        : [...prev, projectId]
+    );
   };
 
   const handleSave = async () => {
@@ -62,7 +77,12 @@ export function GroupManager({ groups: initialGroups, projects }: GroupManagerPr
         const res = await fetch(`/api/groups/${editingGroup.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, description, color }),
+          body: JSON.stringify({
+            name,
+            description,
+            color,
+            projectIds: selectedProjectIds,
+          }),
         });
 
         if (!res.ok) throw new Error('Failed to update group');
@@ -84,6 +104,20 @@ export function GroupManager({ groups: initialGroups, projects }: GroupManagerPr
         const data = await res.json();
         setGroups((prev) => [...prev, data.group]);
         toast.success('Grupa utworzona');
+        const newGroupId = data.group.id;
+        if (selectedProjectIds.length > 0) {
+          const updateRes = await fetch(`/api/groups/${newGroupId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ projectIds: selectedProjectIds }),
+          });
+          if (updateRes.ok) {
+            const updated = await updateRes.json();
+            setGroups((prev) =>
+              prev.map((g) => (g.id === newGroupId ? updated.group : g))
+            );
+          }
+        }
       }
 
       setIsDialogOpen(false);
@@ -158,6 +192,35 @@ export function GroupManager({ groups: initialGroups, projects }: GroupManagerPr
                     placeholder="#6b7280"
                     className="flex-1"
                   />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Projekty w grupie</Label>
+                <div className="border rounded-md p-3 max-h-[200px] overflow-y-auto space-y-2">
+                  {projects.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      Brak projektów.
+                    </p>
+                  ) : (
+                    projects.map((project) => (
+                      <label
+                        key={project.id}
+                        className={cn(
+                          'flex items-center gap-2 cursor-pointer rounded px-2 py-1.5 hover:bg-muted/50',
+                          selectedProjectIds.includes(project.id) &&
+                            'bg-muted/50'
+                        )}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedProjectIds.includes(project.id)}
+                          onChange={() => toggleProject(project.id)}
+                          className="h-4 w-4 rounded border-input"
+                        />
+                        <span className="text-sm truncate">{project.name}</span>
+                      </label>
+                    ))
+                  )}
                 </div>
               </div>
               <div className="flex gap-2 pt-4">

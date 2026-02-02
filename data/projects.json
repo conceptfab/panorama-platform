@@ -4,14 +4,16 @@
       "id": "proj-75c6a0e3",
       "name": "Jutrzenki",
       "description": "",
-      "thumbnailUrl": "",
+      "thumbnailUrl": "/uploads/projects/proj-75c6a0e3/thumbnails/thumb.webp",
       "configPath": "/uploads/projects/proj-75c6a0e3/config.json",
       "createdAt": "2026-02-02T14:35:54.376Z",
-      "updatedAt": "2026-02-02T14:35:54.376Z",
+      "updatedAt": "2026-02-02T20:48:59.381Z",
       "createdBy": "user-001",
-      "groupIds": [],
-      "isPublished": false,
-      "panoramaCount": 0
+      "groupIds": [
+        "group-f3efd3df"
+      ],
+      "isPublished": true,
+      "panoramaCount": 3
     }
   ]
 }

@@ -1,12 +1,19 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import { readJsonFile, writeJsonFile, ensureDir, deleteDir } from './json-store';
+import {
+  readJsonFile,
+  writeJsonFile,
+  ensureDir,
+  deleteDir,
+} from './json-store';
+import { getDataRoot } from '@/lib/data-root';
 import { Project, ProjectsData, ProjectConfig } from '@/types';
-import { generateId, formatDate } from '@/utils/helpers';
+import { generateId, formatDate, projectSlugFromName } from '@/utils/helpers';
 import { projectsDataSchema, projectConfigSchema } from '@/utils/validation';
+import { syncGroupsProjectIdsFromProjects } from './sync-groups-projects';
 
 const PROJECTS_FILE = 'projects.json';
-const UPLOADS_DIR = path.join(process.cwd(), 'uploads', 'projects');
+const UPLOADS_DIR = path.join(getDataRoot(), 'uploads', 'projects');
 
 export async function getProjects(): Promise<Project[]> {
   const data = await readJsonFile<ProjectsData>(PROJECTS_FILE);
@@ -19,17 +26,30 @@ export async function getProjectById(id: string): Promise<Project | null> {
   return projects.find((p) => p.id === id) || null;
 }
 
-export async function getProjectsByGroupId(groupId: string): Promise<Project[]> {
+export async function getProjectsByGroupId(
+  groupId: string
+): Promise<Project[]> {
   const projects = await getProjects();
   return projects.filter((p) => p.groupIds.includes(groupId));
 }
 
-export async function getProjectsForUser(userGroupIds: string[]): Promise<Project[]> {
+export async function getProjectsForUser(
+  userGroupIds: string[]
+): Promise<Project[]> {
   const projects = await getProjects();
   return projects.filter(
-    (p) =>
-      p.isPublished && p.groupIds.some((gid) => userGroupIds.includes(gid))
+    (p) => p.isPublished && p.groupIds.some((gid) => userGroupIds.includes(gid))
   );
+}
+
+function ensureUniqueProjectSlug(
+  existingIds: string[],
+  baseSlug: string
+): string {
+  if (!existingIds.includes(baseSlug)) return baseSlug;
+  let n = 2;
+  while (existingIds.includes(`${baseSlug}-${n}`)) n++;
+  return `${baseSlug}-${n}`;
 }
 
 export async function createProject(
@@ -39,7 +59,9 @@ export async function createProject(
   groupIds: string[] = []
 ): Promise<Project> {
   const projects = await getProjects();
-  const id = generateId('proj');
+  const existingIds = projects.map((p) => p.id);
+  const baseSlug = projectSlugFromName(name, description) || generateId('proj');
+  const id = ensureUniqueProjectSlug(existingIds, baseSlug);
   const now = formatDate(new Date());
 
   const projectDir = path.join(UPLOADS_DIR, id);
@@ -90,12 +112,14 @@ export async function createProject(
   projects.push(newProject);
   await writeJsonFile<ProjectsData>(PROJECTS_FILE, { projects });
 
+  await syncGroupsProjectIdsFromProjects();
   return newProject;
 }
 
 export async function updateProject(
   id: string,
-  updates: Partial<Omit<Project, 'id' | 'createdAt' | 'createdBy'>>
+  updates: Partial<Omit<Project, 'id' | 'createdAt' | 'createdBy'>>,
+  options?: { skipGroupSync?: boolean }
 ): Promise<Project | null> {
   const projects = await getProjects();
   const index = projects.findIndex((p) => p.id === id);
@@ -109,6 +133,10 @@ export async function updateProject(
   };
 
   await writeJsonFile<ProjectsData>(PROJECTS_FILE, { projects });
+
+  if (updates.groupIds !== undefined && !options?.skipGroupSync) {
+    await syncGroupsProjectIdsFromProjects();
+  }
   return projects[index];
 }
 
@@ -124,10 +152,13 @@ export async function deleteProject(id: string): Promise<boolean> {
   projects.splice(index, 1);
   await writeJsonFile<ProjectsData>(PROJECTS_FILE, { projects });
 
+  await syncGroupsProjectIdsFromProjects();
   return true;
 }
 
-export async function getProjectConfig(id: string): Promise<ProjectConfig | null> {
+export async function getProjectConfig(
+  id: string
+): Promise<ProjectConfig | null> {
   const configPath = path.join(UPLOADS_DIR, id, 'config.json');
   try {
     const content = await fs.readFile(configPath, 'utf-8');
@@ -148,14 +179,60 @@ export async function updateProjectConfig(
     validated.updatedAt = formatDate(new Date());
     await fs.writeFile(configPath, JSON.stringify(validated, null, 2));
 
+    // Set project thumbnail to first panorama's thumbnail
+    let thumbnailUrl = '';
+    if (validated.panoramas.length > 0 && validated.panoramas[0].thumbnail) {
+      thumbnailUrl = `/uploads/projects/${id}/thumbnails/${validated.panoramas[0].thumbnail}`;
+    }
+
     await updateProject(id, {
       name: validated.projectName,
       description: validated.description,
       panoramaCount: validated.panoramas.length,
+      thumbnailUrl,
     });
 
     return true;
   } catch {
     return false;
   }
+}
+
+/**
+ * Zwraca rozmiar katalogu projektu na dysku (w bajtach).
+ * Zwraca 0, jeśli katalog nie istnieje lub wystąpi błąd.
+ */
+export async function getProjectSize(id: string): Promise<number> {
+  const projectDir = path.join(UPLOADS_DIR, id);
+  try {
+    const entries = await fs.readdir(projectDir, { withFileTypes: true });
+    let total = 0;
+    for (const entry of entries) {
+      const fullPath = path.join(projectDir, entry.name);
+      if (entry.isDirectory()) {
+        total += await getDirSize(fullPath);
+      } else {
+        const stat = await fs.stat(fullPath);
+        total += stat.size;
+      }
+    }
+    return total;
+  } catch {
+    return 0;
+  }
+}
+
+async function getDirSize(dirPath: string): Promise<number> {
+  const entries = await fs.readdir(dirPath, { withFileTypes: true });
+  let total = 0;
+  for (const entry of entries) {
+    const fullPath = path.join(dirPath, entry.name);
+    if (entry.isDirectory()) {
+      total += await getDirSize(fullPath);
+    } else {
+      const stat = await fs.stat(fullPath);
+      total += stat.size;
+    }
+  }
+  return total;
 }

@@ -18,6 +18,19 @@ export function slugify(text: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
+/** Maksymalna długość slug-a projektu (URL + katalog). */
+const PROJECT_SLUG_MAX_LENGTH = 50;
+
+/**
+ * Generuje slug projektu z nazwy lub opisu (naturalny, czytelny w URL i nazwie katalogu).
+ * Jeśli wynik jest pusty, zwraca '' – wtedy createProject użyje fallback (np. proj-xxx).
+ */
+export function projectSlugFromName(name: string, description: string): string {
+  const raw = slugify(name.trim() || description.trim());
+  if (!raw) return '';
+  return raw.slice(0, PROJECT_SLUG_MAX_LENGTH).replace(/-+$/, '');
+}
+
 export function matchEmailPattern(email: string, pattern: string): boolean {
   if (pattern === '*') return true;
 

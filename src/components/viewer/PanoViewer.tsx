@@ -9,9 +9,16 @@ import Script from 'next/script';
 interface PanoViewerProps {
   config: ProjectConfig;
   basePath: string;
+  isAdmin?: boolean;
+  projectId?: string;
 }
 
-export function PanoViewer({ config, basePath }: PanoViewerProps) {
+export function PanoViewer({
+  config,
+  basePath,
+  isAdmin,
+  projectId,
+}: PanoViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<unknown>(null);
   const panoramasRef = useRef<unknown[]>([]);
@@ -19,6 +26,8 @@ export function PanoViewer({ config, basePath }: PanoViewerProps) {
   const [loadProgress, setLoadProgress] = useState(0);
   const [scriptsLoaded, setScriptsLoaded] = useState(false);
   const [autoRotate, setAutoRotate] = useState(config.settings.autoRotate);
+  const [threeLoaded, setThreeLoaded] = useState(false);
+  const [, setCurrentPanoramaIndex] = useState(0);
 
   const initViewer = useCallback(() => {
     if (!containerRef.current || !window.PANOLENS || !window.THREE) return;
@@ -54,10 +63,8 @@ export function PanoViewer({ config, basePath }: PanoViewerProps) {
 
       panorama.addEventListener('enter-fade-start', () => {
         const pos = panoData.initialPosition;
-        viewer.tweenControlCenter(
-          new THREE.Vector3(pos.x, pos.y, pos.z),
-          800
-        );
+        viewer.tweenControlCenter(new THREE.Vector3(pos.x, pos.y, pos.z), 800);
+        setCurrentPanoramaIndex(index);
       });
 
       // Link hotspots
@@ -97,15 +104,25 @@ export function PanoViewer({ config, basePath }: PanoViewerProps) {
       const panoAny = pano as any;
       const pendingLinks = panoAny._pendingLinks;
       if (pendingLinks) {
-        pendingLinks.forEach((link: { targetIndex: number; position: { x: number; y: number; z: number }; icon: string }) => {
-          const targetPano = panoramas[link.targetIndex];
-          panoAny.link(
-            targetPano,
-            new THREE.Vector3(link.position.x, link.position.y, link.position.z),
-            360,
-            link.icon
-          );
-        });
+        pendingLinks.forEach(
+          (link: {
+            targetIndex: number;
+            position: { x: number; y: number; z: number };
+            icon: string;
+          }) => {
+            const targetPano = panoramas[link.targetIndex];
+            panoAny.link(
+              targetPano,
+              new THREE.Vector3(
+                link.position.x,
+                link.position.y,
+                link.position.z
+              ),
+              360,
+              link.icon
+            );
+          }
+        );
       }
     });
 
@@ -167,7 +184,11 @@ export function PanoViewer({ config, basePath }: PanoViewerProps) {
   }, []);
 
   const handleToggleAutoRotate = useCallback(() => {
-    const viewer = viewerRef.current as { OrbitControls?: { autoRotate: boolean }; enableAutoRate?: () => void; disableAutoRate?: () => void };
+    const viewer = viewerRef.current as {
+      OrbitControls?: { autoRotate: boolean };
+      enableAutoRate?: () => void;
+      disableAutoRate?: () => void;
+    };
     if (viewer?.OrbitControls) {
       const next = !viewer.OrbitControls.autoRotate;
       viewer.OrbitControls.autoRotate = next;
@@ -188,6 +209,14 @@ export function PanoViewer({ config, basePath }: PanoViewerProps) {
     }
   }, []);
 
+  const handleHome = useCallback(() => {
+    const viewer = viewerRef.current as { setPanorama?: (p: unknown) => void };
+    const panoramas = panoramasRef.current;
+    if (viewer?.setPanorama && panoramas[0]) {
+      viewer.setPanorama(panoramas[0]);
+    }
+  }, []);
+
   const handleScreenshot = useCallback(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -195,12 +224,19 @@ export function PanoViewer({ config, basePath }: PanoViewerProps) {
     const canvas = container.querySelector('canvas');
     if (!canvas) return;
 
-    const viewer = viewerRef.current as { panorama?: { traverse: (fn: (obj: { visible: boolean }) => void) => void } };
+    const viewer = viewerRef.current as {
+      panorama?: {
+        traverse: (fn: (obj: { visible: boolean }) => void) => void;
+      };
+    };
     const hidden: { visible: boolean }[] = [];
 
     // Hide hotspots temporarily
     viewer?.panorama?.traverse((obj) => {
-      if ((obj as { constructor?: { name: string } }).constructor?.name === 'Infospot') {
+      if (
+        (obj as { constructor?: { name: string } }).constructor?.name ===
+        'Infospot'
+      ) {
         hidden.push(obj);
         obj.visible = false;
       }
@@ -219,10 +255,19 @@ export function PanoViewer({ config, basePath }: PanoViewerProps) {
 
           ctx.drawImage(canvas, 0, 0);
 
-          // Add watermark
-          const label = 'CONCEPTFAB Panorama Viewer';
+          // Add watermark (CONCEPTFAB 30% smaller, Pano 30% larger, version 1/3 of Pano)
+          const appVersion =
+            typeof process !== 'undefined'
+              ? process.env.NEXT_PUBLIC_APP_VERSION ?? '0.0.0'
+              : '0.0.0';
+          const panoPart = ' Pano Viewer ';
+          const versionPart = `v: ${appVersion}`;
           const fontSize = Math.max(14, Math.round(w / 60));
-          ctx.font = `300 ${fontSize}px Inter, sans-serif`;
+          const smallFontSize = fontSize * 0.7;
+          const panoFontSize = smallFontSize * 1.3;
+          const versionFontSize = 10;
+          const xRight = w - Math.round(w * 0.04);
+          const y = Math.round(h * 0.03);
           ctx.textAlign = 'right';
           ctx.textBaseline = 'top';
           ctx.shadowColor = 'rgba(0,0,0,0.6)';
@@ -230,7 +275,14 @@ export function PanoViewer({ config, basePath }: PanoViewerProps) {
           ctx.shadowOffsetX = 1;
           ctx.shadowOffsetY = 1;
           ctx.fillStyle = 'rgba(255,255,255,0.95)';
-          ctx.fillText(label, w - Math.round(w * 0.04), Math.round(h * 0.03));
+          ctx.font = `300 ${versionFontSize}px Inter, sans-serif`;
+          ctx.fillText(versionPart, xRight, y);
+          const versionWidth = ctx.measureText(versionPart).width;
+          ctx.font = `300 ${panoFontSize}px Inter, sans-serif`;
+          ctx.fillText(panoPart, xRight - versionWidth, y);
+          const suffixWidth = ctx.measureText(panoPart).width + versionWidth;
+          ctx.font = `300 ${smallFontSize}px Inter, sans-serif`;
+          ctx.fillText('CONCEPTFAB', xRight - suffixWidth, y);
 
           let dataUrl;
           let ext = 'webp';
@@ -258,6 +310,93 @@ export function PanoViewer({ config, basePath }: PanoViewerProps) {
     });
   }, []);
 
+  const handleGenerateThumbnail = useCallback(async () => {
+    if (!projectId || !isAdmin) return;
+
+    const container = containerRef.current;
+    if (!container) return;
+
+    const canvas = container.querySelector('canvas');
+    if (!canvas) return;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const viewer = viewerRef.current as any;
+    if (!viewer) return;
+
+    const hidden: { obj: { visible: boolean }; wasVisible: boolean }[] = [];
+
+    // Hide ALL children of panorama (hotspots, infospots, sprites, links)
+    if (viewer.panorama && viewer.panorama.children) {
+      viewer.panorama.children.forEach((child: { visible: boolean }) => {
+        if (child.visible) {
+          hidden.push({ obj: child, wasVisible: true });
+          child.visible = false;
+        }
+      });
+    }
+
+    // Also traverse scene for any stray sprites
+    if (viewer.scene) {
+      viewer.scene.traverse((obj: { visible: boolean; type?: string }) => {
+        if (obj.type === 'Sprite' && obj.visible) {
+          hidden.push({ obj, wasVisible: true });
+          obj.visible = false;
+        }
+      });
+    }
+
+    // Force immediate render
+    if (viewer.renderer && viewer.scene && viewer.camera) {
+      viewer.renderer.render(viewer.scene, viewer.camera);
+    }
+
+    return new Promise<void>((resolve, reject) => {
+      // Wait for render
+      setTimeout(async () => {
+        try {
+          const dataUrl = canvas.toDataURL('image/png', 1.0);
+
+          const response = await fetch(`/api/projects/${projectId}/thumbnail`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ imageData: dataUrl }),
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to generate thumbnail');
+          }
+
+          // Show success feedback
+          const toast = document.createElement('div');
+          toast.className =
+            'fixed bottom-6 left-1/2 -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-fade-in';
+          toast.textContent = 'Miniaturka zapisana!';
+          document.body.appendChild(toast);
+          setTimeout(() => toast.remove(), 2000);
+
+          resolve();
+        } catch (error) {
+          console.error('Thumbnail generation error:', error);
+
+          // Show error feedback
+          const toast = document.createElement('div');
+          toast.className =
+            'fixed bottom-6 left-1/2 -translate-x-1/2 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+          toast.textContent = 'Błąd generowania miniaturki';
+          document.body.appendChild(toast);
+          setTimeout(() => toast.remove(), 3000);
+
+          reject(error);
+        } finally {
+          // Restore visibility
+          hidden.forEach(({ obj, wasVisible }) => {
+            obj.visible = wasVisible;
+          });
+        }
+      }, 200);
+    });
+  }, [projectId, isAdmin]);
+
   return (
     <>
       <Script
@@ -265,13 +404,16 @@ export function PanoViewer({ config, basePath }: PanoViewerProps) {
         strategy="afterInteractive"
         onLoad={() => {
           window.process = window.process || { env: {} };
+          setThreeLoaded(true);
         }}
       />
-      <Script
-        src="/panolens/panolens.min.js"
-        strategy="afterInteractive"
-        onLoad={() => setScriptsLoaded(true)}
-      />
+      {threeLoaded && (
+        <Script
+          src="/panolens/panolens.min.js"
+          strategy="afterInteractive"
+          onLoad={() => setScriptsLoaded(true)}
+        />
+      )}
 
       <div className="relative w-full h-screen bg-black">
         <div
@@ -293,6 +435,11 @@ export function PanoViewer({ config, basePath }: PanoViewerProps) {
           onToggleAutoRotate={handleToggleAutoRotate}
           onFullscreen={handleFullscreen}
           onScreenshot={handleScreenshot}
+          onHome={handleHome}
+          isAdmin={isAdmin}
+          onGenerateThumbnail={
+            isAdmin && projectId ? handleGenerateThumbnail : undefined
+          }
         />
       </div>
     </>

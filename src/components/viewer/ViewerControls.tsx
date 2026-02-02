@@ -6,6 +6,9 @@ import {
   Maximize,
   Minimize,
   Camera,
+  Home,
+  ImagePlus,
+  Loader2,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
@@ -14,6 +17,9 @@ interface ViewerControlsProps {
   onToggleAutoRotate: () => void;
   onFullscreen: () => void;
   onScreenshot: () => void;
+  onHome: () => void;
+  isAdmin?: boolean;
+  onGenerateThumbnail?: () => Promise<void>;
 }
 
 export function ViewerControls({
@@ -21,8 +27,22 @@ export function ViewerControls({
   onToggleAutoRotate,
   onFullscreen,
   onScreenshot,
+  onHome,
+  isAdmin,
+  onGenerateThumbnail,
 }: ViewerControlsProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState(false);
+
+  const handleGenerateThumbnail = async () => {
+    if (!onGenerateThumbnail || isGeneratingThumbnail) return;
+    setIsGeneratingThumbnail(true);
+    try {
+      await onGenerateThumbnail();
+    } finally {
+      setIsGeneratingThumbnail(false);
+    }
+  };
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -36,7 +56,17 @@ export function ViewerControls({
   }, []);
 
   return (
-    <div className="absolute bottom-6 right-6 flex gap-2 z-40">
+    <div className="absolute top-6 right-6 flex gap-2 z-40">
+      <Button
+        variant="secondary"
+        size="icon"
+        className="bg-black/50 hover:bg-black/70 text-white border-0"
+        onClick={onHome}
+        title="Powrót do startu"
+      >
+        <Home className="h-5 w-5" />
+      </Button>
+
       <Button
         variant="secondary"
         size="icon"
@@ -59,6 +89,23 @@ export function ViewerControls({
       >
         <Camera className="h-5 w-5" />
       </Button>
+
+      {isAdmin && onGenerateThumbnail && (
+        <Button
+          variant="secondary"
+          size="icon"
+          className="bg-amber-600/80 hover:bg-amber-500/90 text-white border-0"
+          onClick={handleGenerateThumbnail}
+          disabled={isGeneratingThumbnail}
+          title="Generuj miniaturkę z aktualnego widoku"
+        >
+          {isGeneratingThumbnail ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : (
+            <ImagePlus className="h-5 w-5" />
+          )}
+        </Button>
+      )}
 
       <Button
         variant="secondary"

@@ -47,12 +47,15 @@ export default async function ViewerPage({ params }: PageProps) {
   }
 
   const basePath = `/uploads/projects/${projectId}`;
+  const isAdmin = session.role === 'admin';
 
   return (
     <div className="fixed inset-0 z-50 bg-black -m-[inherit]">
       <PanoViewer
         config={config}
         basePath={basePath}
+        isAdmin={isAdmin}
+        projectId={projectId}
       />
     </div>
   );

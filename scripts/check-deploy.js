@@ -27,7 +27,10 @@ const log = {
   success: (msg) => console.log(`${colors.green}✓${colors.reset} ${msg}`),
   warn: (msg) => console.log(`${colors.yellow}⚠${colors.reset} ${msg}`),
   error: (msg) => console.log(`${colors.red}✗${colors.reset} ${msg}`),
-  header: (msg) => console.log(`\n${colors.bold}${colors.cyan}═══ ${msg} ═══${colors.reset}\n`),
+  header: (msg) =>
+    console.log(
+      `\n${colors.bold}${colors.cyan}═══ ${msg} ═══${colors.reset}\n`
+    ),
 };
 
 let errors = 0;
@@ -52,7 +55,12 @@ function check(name, fn) {
 }
 
 function exec(cmd, options = {}) {
-  return execSync(cmd, { cwd: ROOT, encoding: 'utf-8', stdio: 'pipe', ...options });
+  return execSync(cmd, {
+    cwd: ROOT,
+    encoding: 'utf-8',
+    stdio: 'pipe',
+    ...options,
+  });
 }
 
 function fileExists(filePath) {
@@ -128,7 +136,9 @@ check('Next.js production build', () => {
     exec('npm run build', { timeout: 180000 });
     return true;
   } catch (e) {
-    console.log(`\n${colors.red}${e.stdout || e.stderr || e.message}${colors.reset}`);
+    console.log(
+      `\n${colors.red}${e.stdout || e.stderr || e.message}${colors.reset}`
+    );
     return false;
   }
 });
@@ -138,15 +148,35 @@ check('.next directory created', () => fileExists('.next'));
 log.header('6. Environment Variables');
 
 const requiredEnvVars = [
-  { name: 'NEXT_PUBLIC_APP_URL', desc: 'Application URL (e.g., https://your-app.railway.app)' },
-  { name: 'JWT_SECRET', desc: 'JWT signing secret (min 32 chars)', secret: true },
-  { name: 'RESEND_API_KEY', desc: 'Resend.com API key for emails', secret: true },
+  {
+    name: 'NEXT_PUBLIC_APP_URL',
+    desc: 'Application URL (e.g., https://your-app.railway.app)',
+  },
+  {
+    name: 'JWT_SECRET',
+    desc: 'JWT signing secret (min 32 chars)',
+    secret: true,
+  },
+  {
+    name: 'RESEND_API_KEY',
+    desc: 'Resend.com API key for emails',
+    secret: true,
+  },
 ];
 
 const optionalEnvVars = [
-  { name: 'NODE_ENV', desc: 'Should be "production" on Railway', default: 'production' },
+  {
+    name: 'NODE_ENV',
+    desc: 'Should be "production" on Railway',
+    default: 'production',
+  },
   { name: 'JWT_EXPIRATION', desc: 'Session duration', default: '7d' },
   { name: 'EMAIL_FROM', desc: 'Sender email address' },
+  {
+    name: 'PANO_DATA_DIR',
+    desc: 'Data root (data + uploads). Railway: /pano-data',
+    default: 'process.cwd()',
+  },
   { name: 'UPLOAD_DIR', desc: 'File upload directory', default: './uploads' },
 ];
 
@@ -179,9 +209,13 @@ check('Build script exists', () => {
 // Check for common Railway issues
 check('No hardcoded localhost URLs in code', () => {
   try {
-    const result = exec('grep -r "localhost:3000" src/ --include="*.ts" --include="*.tsx" || true');
+    const result = exec(
+      'grep -r "localhost:3000" src/ --include="*.ts" --include="*.tsx" || true'
+    );
     if (result.trim() && !result.includes('NEXT_PUBLIC_APP_URL')) {
-      console.log(`\n${colors.yellow}Found localhost references:${colors.reset}`);
+      console.log(
+        `\n${colors.yellow}Found localhost references:${colors.reset}`
+      );
       console.log(result);
       return 'warn';
     }
@@ -200,7 +234,9 @@ log.header('8. Storage Check');
 
 check('Upload directory configuration', () => {
   log.info('Note: Railway has ephemeral storage.');
-  log.info('For persistent files, use external storage (S3, Cloudflare R2, etc.)');
+  log.info(
+    'For persistent files, use external storage (S3, Cloudflare R2, etc.)'
+  );
   return 'warn';
 });
 
@@ -211,12 +247,18 @@ check('Upload directory configuration', () => {
 log.header('Summary');
 
 if (errors === 0 && warnings === 0) {
-  console.log(`${colors.green}${colors.bold}All checks passed! Ready for deployment.${colors.reset}\n`);
+  console.log(
+    `${colors.green}${colors.bold}All checks passed! Ready for deployment.${colors.reset}\n`
+  );
 } else if (errors === 0) {
-  console.log(`${colors.yellow}${colors.bold}Passed with ${warnings} warning(s).${colors.reset}`);
+  console.log(
+    `${colors.yellow}${colors.bold}Passed with ${warnings} warning(s).${colors.reset}`
+  );
   console.log('Review warnings before deploying.\n');
 } else {
-  console.log(`${colors.red}${colors.bold}Failed with ${errors} error(s) and ${warnings} warning(s).${colors.reset}`);
+  console.log(
+    `${colors.red}${colors.bold}Failed with ${errors} error(s) and ${warnings} warning(s).${colors.reset}`
+  );
   console.log('Fix errors before deploying.\n');
 }
 
@@ -226,7 +268,9 @@ console.log('2. Connect repo to Railway (railway.app)');
 console.log('3. Add environment variables in Railway dashboard');
 console.log('4. Deploy!\n');
 
-console.log(`${colors.bold}Required Railway Environment Variables:${colors.reset}`);
+console.log(
+  `${colors.bold}Required Railway Environment Variables:${colors.reset}`
+);
 requiredEnvVars.forEach((v) => {
   console.log(`  - ${v.name}`);
 });

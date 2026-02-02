@@ -6,18 +6,18 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 // Nadawca: "Name <email@domain.com>". Set EMAIL_FROM_USE_RESEND_TEST=true tylko do testów (wysyłka tylko na adres konta Resend).
 function getEmailFrom(): string {
   if (process.env.EMAIL_FROM_USE_RESEND_TEST === 'true') {
-    return 'ConceptFab Panorama <onboarding@resend.dev>';
+    return 'ConceptFab Pano <onboarding@resend.dev>';
   }
   const raw = (process.env.EMAIL_FROM ?? '')
     .trim()
     .replace(/\s+/g, ' ')
     .replace(/[\r\n]+/g, '');
   if (!raw || raw.toLowerCase().includes('localhost')) {
-    return 'ConceptFab Panorama <onboarding@resend.dev>';
+    return 'ConceptFab Pano <onboarding@resend.dev>';
   }
   return raw.includes('<') && raw.includes('>')
     ? raw
-    : `ConceptFab Panorama <${raw}>`;
+    : `ConceptFab Pano <${raw}>`;
 }
 
 const RESEND_TEST_RECIPIENT = (process.env.RESEND_TEST_RECIPIENT ?? '')
@@ -42,12 +42,13 @@ export async function sendOTPEmail(
     };
   }
 
+  const appVersion = process.env.NEXT_PUBLIC_APP_VERSION ?? '0.0.0';
   try {
     const { error } = await resend.emails.send({
       from: getEmailFrom(),
       to: email,
-      subject: 'Kod logowania - Panorama Viewer',
-      html: getOTPEmailTemplate(code),
+      subject: `Kod logowania - Pano Viewer v: ${appVersion}`,
+      html: getOTPEmailTemplate(code, appVersion),
     });
 
     if (error) {

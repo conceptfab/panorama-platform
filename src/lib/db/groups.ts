@@ -2,6 +2,10 @@ import { readJsonFile, writeJsonFile } from './json-store';
 import { Group, GroupsData } from '@/types';
 import { generateId, formatDate } from '@/utils/helpers';
 import { groupsDataSchema } from '@/utils/validation';
+import {
+  syncGroupProjectIdsToProjects,
+  removeGroupFromAllProjects,
+} from './sync-groups-projects';
 
 const GROUPS_FILE = 'groups.json';
 
@@ -48,6 +52,10 @@ export async function updateGroup(
 
   groups[index] = { ...groups[index], ...updates };
   await writeJsonFile<GroupsData>(GROUPS_FILE, { groups });
+
+  if (updates.projectIds !== undefined) {
+    await syncGroupProjectIdsToProjects(id, groups[index].projectIds);
+  }
   return groups[index];
 }
 
@@ -89,6 +97,7 @@ export async function deleteGroup(id: string): Promise<boolean> {
 
   if (index === -1) return false;
 
+  await removeGroupFromAllProjects(id);
   groups.splice(index, 1);
   await writeJsonFile<GroupsData>(GROUPS_FILE, { groups });
   return true;

@@ -8,8 +8,24 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Save, Plus, Trash2, Copy, Loader2 } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  ArrowLeft,
+  Save,
+  Plus,
+  Trash2,
+  Copy,
+  Loader2,
+  RotateCw,
+  Camera,
+  Maximize,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { generateId } from '@/utils/helpers';
 
@@ -19,24 +35,141 @@ interface HotspotEditorProps {
   initialConfig: ProjectConfig;
 }
 
-export function HotspotEditor({ projectId, projectName, initialConfig }: HotspotEditorProps) {
+export function HotspotEditor({
+  projectId,
+  projectName,
+  initialConfig,
+}: HotspotEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<unknown>(null);
-  const panoramasRef = useRef<unknown[]>([]);
+  const currentPanoramaRef = useRef<unknown>(null);
 
   const [config, setConfig] = useState<ProjectConfig>(initialConfig);
+  const [threeLoaded, setThreeLoaded] = useState(false);
   const [scriptsLoaded, setScriptsLoaded] = useState(false);
   const [currentPanoramaIndex, setCurrentPanoramaIndex] = useState(0);
-  const [selectedHotspotId, setSelectedHotspotId] = useState<string | null>(null);
-  const [clickedPosition, setClickedPosition] = useState<Position3D | null>(null);
+  const [selectedHotspotId, setSelectedHotspotId] = useState<string | null>(
+    null
+  );
+  const [clickedPosition, setClickedPosition] = useState<Position3D | null>(
+    null
+  );
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [autoRotate, setAutoRotate] = useState(false);
+  const [isAddingMode, setIsAddingMode] = useState(false);
+  const markerRef = useRef<unknown>(null);
+  const isAddingModeRef = useRef(false);
+  const configRef = useRef(initialConfig);
+
+  // Keep refs in sync with state
+  useEffect(() => {
+    isAddingModeRef.current = isAddingMode;
+  }, [isAddingMode]);
+
+  useEffect(() => {
+    configRef.current = config;
+  }, [config]);
 
   const currentPanorama = config.panoramas[currentPanoramaIndex];
-  const selectedHotspot = currentPanorama?.hotspots.find(h => h.id === selectedHotspotId);
+  const selectedHotspot = currentPanorama?.hotspots.find(
+    (h) => h.id === selectedHotspotId
+  );
   const basePath = `/uploads/projects/${projectId}`;
+
+  // Create marker texture for hotspot position
+  const createMarkerTexture = useCallback(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d')!;
+
+    // Outer ring
+    ctx.beginPath();
+    ctx.arc(32, 32, 28, 0, Math.PI * 2);
+    ctx.strokeStyle = '#ef4444';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+
+    // Inner dot
+    ctx.beginPath();
+    ctx.arc(32, 32, 8, 0, Math.PI * 2);
+    ctx.fillStyle = '#ef4444';
+    ctx.fill();
+
+    // Crosshair lines
+    ctx.strokeStyle = '#ef4444';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(32, 4);
+    ctx.lineTo(32, 18);
+    ctx.moveTo(32, 46);
+    ctx.lineTo(32, 60);
+    ctx.moveTo(4, 32);
+    ctx.lineTo(18, 32);
+    ctx.moveTo(46, 32);
+    ctx.lineTo(60, 32);
+    ctx.stroke();
+
+    const texture = new window.THREE.CanvasTexture(canvas);
+    return texture;
+  }, []);
+
+  // Load single panorama
+  const loadPanorama = useCallback(
+    (index: number) => {
+      if (!window.PANOLENS || !window.THREE) return;
+
+      const viewer = viewerRef.current as {
+        add?: (p: unknown) => void;
+        remove?: (p: unknown) => void;
+        setPanorama?: (p: unknown) => void;
+        tweenControlCenter?: (v: unknown, d: number) => void;
+        camera?: unknown;
+        panorama?: unknown;
+      };
+      if (!viewer) return;
+
+      setIsLoading(true);
+
+      const THREE = window.THREE;
+      const PANOLENS = window.PANOLENS;
+
+      // Remove old panorama
+      if (currentPanoramaRef.current) {
+        viewer.remove?.(currentPanoramaRef.current);
+        (currentPanoramaRef.current as { dispose?: () => void }).dispose?.();
+        currentPanoramaRef.current = null;
+      }
+
+      const panoData = configRef.current.panoramas[index];
+      if (!panoData) {
+        setIsLoading(false);
+        return;
+      }
+
+      const imagePath = `${basePath}/panoramas/${panoData.file}`;
+      const panorama = new PANOLENS.ImagePanorama(imagePath);
+
+      panorama.addEventListener('enter-fade-start', () => {
+        const pos = panoData.initialPosition;
+        viewer.tweenControlCenter?.(
+          new THREE.Vector3(pos.x, pos.y, pos.z),
+          400
+        );
+        setIsLoading(false);
+      });
+
+      currentPanoramaRef.current = panorama;
+      viewer.add?.(panorama);
+      viewer.setPanorama?.(panorama);
+    },
+    [basePath]
+  );
 
   const initViewer = useCallback(() => {
     if (!containerRef.current || !window.PANOLENS || !window.THREE) return;
+    if (viewerRef.current) return; // Already initialized
 
     const THREE = window.THREE;
     const PANOLENS = window.PANOLENS;
@@ -49,38 +182,25 @@ export function HotspotEditor({ projectId, projectName, initialConfig }: Hotspot
 
     viewerRef.current = viewer;
 
-    const panoramas: unknown[] = [];
-
-    config.panoramas.forEach((panoData, index) => {
-      const imagePath = `${basePath}/panoramas/${panoData.file}`;
-      const panorama = new PANOLENS.ImagePanorama(imagePath);
-
-      panorama.addEventListener('enter', () => {
-        const pos = panoData.initialPosition;
-        viewer.tweenControlCenter(
-          new THREE.Vector3(pos.x, pos.y, pos.z),
-          400
-        );
-      });
-
-      panoramas[index] = panorama;
-    });
-
-    panoramasRef.current = panoramas;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    panoramas.forEach((p) => (viewer as any).add(p));
-
-    if (panoramas.length > 0) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (viewer as any).setPanorama(panoramas[0]);
-    }
-
     // Click handler for coordinate picking
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
 
+    // Create marker sprite
+    const markerTexture = createMarkerTexture();
+    const markerMaterial = new THREE.SpriteMaterial({
+      map: markerTexture,
+      depthTest: false,
+      transparent: true,
+    });
+    const marker = new THREE.Sprite(markerMaterial);
+    marker.scale.set(300, 300, 1);
+    marker.visible = false;
+    viewer.scene.add(marker);
+    markerRef.current = marker;
+
     containerRef.current.addEventListener('click', (event: MouseEvent) => {
-      if (!viewer.panorama) return;
+      if (!viewer.panorama || !isAddingModeRef.current) return;
 
       const rect = containerRef.current!.getBoundingClientRect();
       mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -91,6 +211,11 @@ export function HotspotEditor({ projectId, projectName, initialConfig }: Hotspot
 
       if (hits.length > 0) {
         const pt = hits[0].point;
+
+        // Update marker position
+        marker.position.set(pt.x, pt.y, pt.z);
+        marker.visible = true;
+
         // Negate X as in original editor
         setClickedPosition({
           x: Math.round(-pt.x),
@@ -99,7 +224,10 @@ export function HotspotEditor({ projectId, projectName, initialConfig }: Hotspot
         });
       }
     });
-  }, [config.panoramas, basePath]);
+
+    // Load first panorama after viewer is ready
+    loadPanorama(0);
+  }, [loadPanorama, createMarkerTexture]);
 
   useEffect(() => {
     if (scriptsLoaded) {
@@ -110,6 +238,9 @@ export function HotspotEditor({ projectId, projectName, initialConfig }: Hotspot
 
   useEffect(() => {
     return () => {
+      if (currentPanoramaRef.current) {
+        (currentPanoramaRef.current as { dispose?: () => void }).dispose?.();
+      }
       if (viewerRef.current) {
         (viewerRef.current as { dispose?: () => void }).dispose?.();
       }
@@ -120,12 +251,11 @@ export function HotspotEditor({ projectId, projectName, initialConfig }: Hotspot
     setCurrentPanoramaIndex(index);
     setSelectedHotspotId(null);
     setClickedPosition(null);
-
-    const viewer = viewerRef.current as { setPanorama?: (p: unknown) => void };
-    const panoramas = panoramasRef.current;
-    if (viewer?.setPanorama && panoramas[index]) {
-      viewer.setPanorama(panoramas[index]);
+    setIsAddingMode(false);
+    if (markerRef.current) {
+      (markerRef.current as { visible: boolean }).visible = false;
     }
+    loadPanorama(index);
   };
 
   const handleAddHotspot = () => {
@@ -149,13 +279,34 @@ export function HotspotEditor({ projectId, projectName, initialConfig }: Hotspot
       updated.panoramas = [...prev.panoramas];
       updated.panoramas[currentPanoramaIndex] = {
         ...updated.panoramas[currentPanoramaIndex],
-        hotspots: [...updated.panoramas[currentPanoramaIndex].hotspots, newHotspot],
+        hotspots: [
+          ...updated.panoramas[currentPanoramaIndex].hotspots,
+          newHotspot,
+        ],
       };
       return updated;
     });
 
+    // Hide marker and exit adding mode
+    if (markerRef.current) {
+      (markerRef.current as { visible: boolean }).visible = false;
+    }
+    setClickedPosition(null);
+    setIsAddingMode(false);
     setSelectedHotspotId(newHotspot.id);
     toast.success('Hotspot dodany');
+  };
+
+  const toggleAddingMode = () => {
+    const newMode = !isAddingMode;
+    setIsAddingMode(newMode);
+    if (!newMode && markerRef.current) {
+      (markerRef.current as { visible: boolean }).visible = false;
+      setClickedPosition(null);
+    }
+    if (newMode) {
+      toast.info('Kliknij w panoramę, aby wybrać pozycję hotspota');
+    }
   };
 
   const handleDeleteHotspot = (hotspotId: string) => {
@@ -177,7 +328,10 @@ export function HotspotEditor({ projectId, projectName, initialConfig }: Hotspot
     toast.success('Hotspot usunięty');
   };
 
-  const handleUpdateHotspot = (hotspotId: string, updates: Partial<Hotspot>) => {
+  const handleUpdateHotspot = (
+    hotspotId: string,
+    updates: Partial<Hotspot>
+  ) => {
     setConfig((prev) => {
       const updated = { ...prev };
       updated.panoramas = [...prev.panoramas];
@@ -217,6 +371,42 @@ export function HotspotEditor({ projectId, projectName, initialConfig }: Hotspot
     }
   };
 
+  const toggleAutoRotate = () => {
+    const viewer = viewerRef.current as {
+      OrbitControls?: { autoRotate: boolean };
+    };
+    if (viewer?.OrbitControls) {
+      const newValue = !autoRotate;
+      viewer.OrbitControls.autoRotate = newValue;
+      setAutoRotate(newValue);
+      toast.success(
+        newValue ? 'Auto-rotacja włączona' : 'Auto-rotacja wyłączona'
+      );
+    }
+  };
+
+  const takeScreenshot = () => {
+    const viewer = viewerRef.current as {
+      getRenderer?: () => { domElement: HTMLCanvasElement };
+    };
+    if (viewer?.getRenderer) {
+      const canvas = viewer.getRenderer().domElement;
+      const link = document.createElement('a');
+      link.download = `panorama-${Date.now()}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      toast.success('Screenshot zapisany');
+    }
+  };
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      containerRef.current?.requestFullscreen();
+    } else {
+      document.exitFullscreen();
+    }
+  };
+
   return (
     <>
       <Script
@@ -224,18 +414,36 @@ export function HotspotEditor({ projectId, projectName, initialConfig }: Hotspot
         strategy="afterInteractive"
         onLoad={() => {
           window.process = window.process || { env: {} };
+          setThreeLoaded(true);
         }}
       />
-      <Script
-        src="/panolens/panolens.min.js"
-        strategy="afterInteractive"
-        onLoad={() => setScriptsLoaded(true)}
-      />
+      {threeLoaded && (
+        <Script
+          src="/panolens/panolens.min.js"
+          strategy="afterInteractive"
+          onLoad={() => setScriptsLoaded(true)}
+        />
+      )}
 
       <div className="fixed inset-0 flex bg-zinc-900">
         {/* Viewer */}
         <div className="flex-1 relative">
-          <div ref={containerRef} className="w-full h-full" />
+          <div
+            ref={containerRef}
+            className={`w-full h-full ${
+              isAddingMode ? 'cursor-crosshair' : ''
+            }`}
+          />
+
+          {/* Loading indicator */}
+          {isLoading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/50 pointer-events-none">
+              <div className="flex items-center gap-3 bg-black/70 text-white px-4 py-2 rounded-lg">
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span>Ładowanie panoramy...</span>
+              </div>
+            </div>
+          )}
 
           {/* Top bar */}
           <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
@@ -249,18 +457,41 @@ export function HotspotEditor({ projectId, projectName, initialConfig }: Hotspot
               <span className="text-white font-medium">{projectName}</span>
             </div>
 
-            <Button onClick={handleSave} disabled={isSaving}>
-              {isSaving ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4 mr-2" />
-              )}
-              Zapisz
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                size="icon"
+                onClick={toggleAutoRotate}
+                className={
+                  autoRotate
+                    ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                    : ''
+                }
+                title="Auto-rotacja"
+              >
+                <RotateCw className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="secondary"
+                size="icon"
+                onClick={takeScreenshot}
+                title="Screenshot"
+              >
+                <Camera className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="secondary"
+                size="icon"
+                onClick={toggleFullscreen}
+                title="Pełny ekran"
+              >
+                <Maximize className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
 
           {/* Coordinates display */}
-          {clickedPosition && (
+          {isAddingMode && clickedPosition && (
             <div className="absolute bottom-4 left-4 bg-black/70 text-white px-4 py-2 rounded-lg flex items-center gap-3">
               <span className="font-mono">
                 {clickedPosition.x}, {clickedPosition.y}, {clickedPosition.z}
@@ -270,11 +501,18 @@ export function HotspotEditor({ projectId, projectName, initialConfig }: Hotspot
               </Button>
             </div>
           )}
+
+          {/* Adding mode indicator */}
+          {isAddingMode && (
+            <div className="absolute bottom-4 right-4 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium">
+              Tryb dodawania hotspota
+            </div>
+          )}
         </div>
 
         {/* Side panel */}
-        <div className="w-80 bg-white dark:bg-zinc-950 border-l overflow-y-auto">
-          <div className="p-4 space-y-4">
+        <div className="w-80 bg-white dark:bg-zinc-950 border-l flex flex-col">
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {/* Panorama selector */}
             <Card>
               <CardHeader className="p-4 pb-2">
@@ -300,22 +538,57 @@ export function HotspotEditor({ projectId, projectName, initialConfig }: Hotspot
             </Card>
 
             {/* Add hotspot */}
-            <Card>
+            <Card className={isAddingMode ? 'ring-2 ring-primary' : ''}>
               <CardHeader className="p-4 pb-2">
-                <CardTitle className="text-sm">Dodaj hotspot</CardTitle>
+                <CardTitle className="text-sm flex items-center gap-2">
+                  Dodaj hotspot
+                  {isAddingMode && (
+                    <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded">
+                      Aktywny
+                    </span>
+                  )}
+                </CardTitle>
               </CardHeader>
-              <CardContent className="p-4 pt-2">
-                <p className="text-xs text-muted-foreground mb-3">
-                  Kliknij w panoramę, aby wybrać pozycję
-                </p>
+              <CardContent className="p-4 pt-2 space-y-3">
                 <Button
                   className="w-full"
-                  onClick={handleAddHotspot}
-                  disabled={!clickedPosition}
+                  variant={isAddingMode ? 'default' : 'outline'}
+                  onClick={toggleAddingMode}
                 >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Dodaj hotspot
+                  {isAddingMode ? (
+                    <>
+                      <Copy className="h-4 w-4 mr-2" />
+                      Anuluj wybieranie
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Wybierz pozycję
+                    </>
+                  )}
                 </Button>
+
+                {isAddingMode && clickedPosition && (
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground">
+                      Wybrana pozycja:{' '}
+                      <span className="font-mono">
+                        {clickedPosition.x}, {clickedPosition.y},{' '}
+                        {clickedPosition.z}
+                      </span>
+                    </p>
+                    <Button className="w-full" onClick={handleAddHotspot}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Dodaj hotspot tutaj
+                    </Button>
+                  </div>
+                )}
+
+                {isAddingMode && !clickedPosition && (
+                  <p className="text-xs text-muted-foreground text-center">
+                    Kliknij w panoramę, aby wybrać pozycję
+                  </p>
+                )}
               </CardContent>
             </Card>
 
@@ -359,7 +632,8 @@ export function HotspotEditor({ projectId, projectName, initialConfig }: Hotspot
                   </div>
                 ))}
 
-                {(!currentPanorama || currentPanorama.hotspots.length === 0) && (
+                {(!currentPanorama ||
+                  currentPanorama.hotspots.length === 0) && (
                   <p className="text-xs text-muted-foreground text-center py-4">
                     Brak hotspotów
                   </p>
@@ -492,6 +766,18 @@ export function HotspotEditor({ projectId, projectName, initialConfig }: Hotspot
                 </CardContent>
               </Card>
             )}
+          </div>
+
+          {/* Save button at bottom */}
+          <div className="p-4 border-t bg-white dark:bg-zinc-950">
+            <Button className="w-full" onClick={handleSave} disabled={isSaving}>
+              {isSaving ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              Zapisz zmiany
+            </Button>
           </div>
         </div>
       </div>

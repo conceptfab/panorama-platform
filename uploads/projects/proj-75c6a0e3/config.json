@@ -3,7 +3,7 @@
   "projectName": "Jutrzenki",
   "description": "",
   "createdAt": "2026-02-02T14:35:54.376Z",
-  "updatedAt": "2026-02-02T14:35:54.376Z",
+  "updatedAt": "2026-02-02T20:28:30.998Z",
   "settings": {
     "autoRotate": true,
     "autoRotateSpeed": 0.5,
@@ -13,7 +13,71 @@
     "splashDuration": 3000,
     "fadeDuration": 2000
   },
-  "panoramas": [],
+  "panoramas": [
+    {
+      "id": "pano-ca22c09b",
+      "name": "01_26_RM_Jutrzenki_R2_0000",
+      "file": "pano-ca22c09b.webp",
+      "thumbnail": "thumb_pano-ca22c09b.webp",
+      "initialPosition": {
+        "x": 1000,
+        "y": 0,
+        "z": 0
+      },
+      "hotspots": [
+        {
+          "id": "hs-92bedf67",
+          "type": "link",
+          "position": {
+            "x": 4739,
+            "y": -242,
+            "z": 1561
+          },
+          "title": "Nowy hotspot",
+          "icon": "arrow-up",
+          "scale": 1,
+          "target": "pano-061b2cb9"
+        },
+        {
+          "id": "hs-9c72cceb",
+          "type": "link",
+          "position": {
+            "x": 4742,
+            "y": 183,
+            "z": 1560
+          },
+          "title": "Nowy hotspot",
+          "icon": "arrow-up",
+          "scale": 1,
+          "target": "pano-fa2fc023"
+        }
+      ]
+    },
+    {
+      "id": "pano-061b2cb9",
+      "name": "01_26_RM_Jutrzenki_R2_0001",
+      "file": "pano-061b2cb9.webp",
+      "thumbnail": "thumb_pano-061b2cb9.webp",
+      "initialPosition": {
+        "x": 1000,
+        "y": 0,
+        "z": 0
+      },
+      "hotspots": []
+    },
+    {
+      "id": "pano-fa2fc023",
+      "name": "01_26_RM_Jutrzenki_R2_0002",
+      "file": "pano-fa2fc023.webp",
+      "thumbnail": "thumb_pano-fa2fc023.webp",
+      "initialPosition": {
+        "x": 1000,
+        "y": 0,
+        "z": 0
+      },
+      "hotspots": []
+    }
+  ],
   "metadata": {
     "author": "CONCEPTFAB",
     "client": "",

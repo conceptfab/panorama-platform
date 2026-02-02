@@ -12,9 +12,11 @@
       "id": "group-f3efd3df",
       "name": "Metro",
       "description": "",
-      "color": "#6b7280",
+      "color": "#0055ff",
       "createdAt": "2026-02-02T14:35:34.044Z",
-      "projectIds": []
+      "projectIds": [
+        "proj-75c6a0e3"
+      ]
     }
   ]
 }

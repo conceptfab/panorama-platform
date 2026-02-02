@@ -3,11 +3,16 @@ import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 import sharp from 'sharp';
 import { requireAdmin } from '@/lib/auth/session';
-import { getProjectById, getProjectConfig, updateProjectConfig } from '@/lib/db/projects';
+import {
+  getProjectById,
+  getProjectConfig,
+  updateProjectConfig,
+} from '@/lib/db/projects';
+import { getDataRoot } from '@/lib/data-root';
 import { generateId } from '@/utils/helpers';
 import { Panorama } from '@/types';
 
-const UPLOADS_DIR = path.join(process.cwd(), 'uploads', 'projects');
+const UPLOADS_DIR = path.join(getDataRoot(), 'uploads', 'projects');
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 const ALLOWED_TYPES = ['image/webp', 'image/jpeg', 'image/png'];
 
@@ -118,7 +123,10 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     if (error instanceof Error && error.message.includes('Forbidden')) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+      return NextResponse.json(
+        { error: 'Admin access required' },
+        { status: 403 }
+      );
     }
     if (error instanceof Error && error.message === 'Unauthorized') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

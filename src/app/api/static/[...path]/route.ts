@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
+import { getDataRoot } from '@/lib/data-root';
 
-const UPLOADS_DIR = path.join(process.cwd(), 'uploads');
+const UPLOADS_DIR = path.join(getDataRoot(), 'uploads');
 
 const MIME_TYPES: Record<string, string> = {
   '.webp': 'image/webp',

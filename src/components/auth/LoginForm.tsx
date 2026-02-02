@@ -5,7 +5,13 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Mail, Loader2, ArrowLeft } from 'lucide-react';
 
 type Step = 'email' | 'code';
@@ -16,7 +22,10 @@ export function LoginForm() {
   const [email, setEmail] = useState('');
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [message, setMessage] = useState<{
+    type: 'success' | 'error';
+    text: string;
+  } | null>(null);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   // Focus first code input when entering code step
@@ -42,7 +51,10 @@ export function LoginForm() {
 
       if (data.success) {
         setStep('code');
-        setMessage({ type: 'success', text: 'Kod został wysłany na podany adres email' });
+        setMessage({
+          type: 'success',
+          text: 'Kod został wysłany na podany adres email',
+        });
       } else {
         setMessage({ type: 'error', text: data.message });
       }
@@ -67,12 +79,15 @@ export function LoginForm() {
     }
 
     // Auto-submit when all digits entered
-    if (value && index === 5 && newCode.every(d => d !== '')) {
+    if (value && index === 5 && newCode.every((d) => d !== '')) {
       handleCodeSubmit(newCode.join(''));
     }
   };
 
-  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (
+    index: number,
+    e: React.KeyboardEvent<HTMLInputElement>
+  ) => {
     if (e.key === 'Backspace' && !code[index] && index > 0) {
       inputRefs.current[index - 1]?.focus();
     }
@@ -80,7 +95,10 @@ export function LoginForm() {
 
   const handlePaste = (e: React.ClipboardEvent) => {
     e.preventDefault();
-    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    const pasted = e.clipboardData
+      .getData('text')
+      .replace(/\D/g, '')
+      .slice(0, 6);
     if (pasted.length === 6) {
       const newCode = pasted.split('');
       setCode(newCode);
@@ -156,9 +174,13 @@ export function LoginForm() {
     <Card className="w-full max-w-md mx-auto">
       <CardHeader className="text-center">
         <CardTitle className="text-2xl font-semibold">
-          CONCEPTFAB<br />
-          <span className="text-lg font-normal text-muted-foreground">
-            Panorama Viewer
+          <span className="text-[0.7em]">CONCEPTFAB</span>
+          <br />
+          <span className="text-[0.91em] font-normal text-muted-foreground">
+            Pano Viewer{' '}
+            <span className="text-[10px]">
+              v: {process.env.NEXT_PUBLIC_APP_VERSION ?? '0.0.0'}
+            </span>
           </span>
         </CardTitle>
         <CardDescription>
@@ -225,7 +247,9 @@ export function LoginForm() {
               {code.map((digit, index) => (
                 <Input
                   key={index}
-                  ref={(el) => { inputRefs.current[index] = el; }}
+                  ref={(el) => {
+                    inputRefs.current[index] = el;
+                  }}
                   type="text"
                   inputMode="numeric"
                   maxLength={1}
@@ -253,7 +277,7 @@ export function LoginForm() {
             <Button
               onClick={() => handleCodeSubmit()}
               className="w-full"
-              disabled={isLoading || code.some(d => d === '')}
+              disabled={isLoading || code.some((d) => d === '')}
             >
               {isLoading ? (
                 <>

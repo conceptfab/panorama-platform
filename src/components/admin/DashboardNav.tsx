@@ -17,6 +17,7 @@ import {
   FolderOpen,
   Users,
   Tags,
+  FileText,
   LogOut,
   Menu,
 } from 'lucide-react';
@@ -37,10 +38,9 @@ export function DashboardNav({ userRole, userEmail }: DashboardNavProps) {
         { href: '/admin/projects', label: 'Projekty', icon: FolderOpen },
         { href: '/admin/users', label: 'Użytkownicy', icon: Users },
         { href: '/admin/groups', label: 'Grupy', icon: Tags },
+        { href: '/admin/files', label: 'Pliki', icon: FileText },
       ]
-    : [
-        { href: '/gallery', label: 'Galeria', icon: LayoutGrid },
-      ];
+    : [{ href: '/gallery', label: 'Galeria', icon: LayoutGrid }];
 
   const handleLogout = async () => {
     await logout();
@@ -55,8 +55,13 @@ export function DashboardNav({ userRole, userEmail }: DashboardNavProps) {
         <div className="flex h-16 items-center justify-between">
           <div className="flex items-center gap-8">
             <Link href="/" className="font-semibold text-lg">
-              <span className="text-primary">CONCEPTFAB</span>
-              <span className="text-muted-foreground text-sm ml-2">Panorama</span>
+              <span className="text-primary text-[0.7em]">CONCEPTFAB</span>
+              <span className="text-muted-foreground text-[0.91em] ml-2">
+                Pano{' '}
+                <span className="text-[10px]">
+                  v: {process.env.NEXT_PUBLIC_APP_VERSION ?? '0.0.0'}
+                </span>
+              </span>
             </Link>
 
             <nav className="hidden md:flex items-center gap-1">
@@ -91,7 +96,10 @@ export function DashboardNav({ userRole, userEmail }: DashboardNavProps) {
                   const Icon = item.icon;
                   return (
                     <DropdownMenuItem key={item.href} asChild>
-                      <Link href={item.href} className="flex items-center gap-2">
+                      <Link
+                        href={item.href}
+                        className="flex items-center gap-2"
+                      >
                         <Icon className="h-4 w-4" />
                         {item.label}
                       </Link>
@@ -105,7 +113,9 @@ export function DashboardNav({ userRole, userEmail }: DashboardNavProps) {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="gap-2">
                   <Avatar className="h-8 w-8">
-                    <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+                    <AvatarFallback className="text-xs">
+                      {initials}
+                    </AvatarFallback>
                   </Avatar>
                   <span className="hidden md:inline text-sm">{userEmail}</span>
                 </Button>
@@ -115,7 +125,10 @@ export function DashboardNav({ userRole, userEmail }: DashboardNavProps) {
                   {isAdmin ? 'Administrator' : 'Użytkownik'}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+                <DropdownMenuItem
+                  onClick={handleLogout}
+                  className="text-red-600"
+                >
                   <LogOut className="h-4 w-4 mr-2" />
                   Wyloguj
                 </DropdownMenuItem>

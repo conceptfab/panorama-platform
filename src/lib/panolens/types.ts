@@ -56,6 +56,7 @@ export interface OrbitControls {
 export interface PanolensViewer {
   container: HTMLElement;
   camera: { position: Vector3 };
+  scene: { add(object: any): void; remove(object: any): void };
   panorama: ImagePanorama | null;
   OrbitControls: OrbitControls;
   options: PanolensViewerOptions;
@@ -80,6 +81,9 @@ declare global {
       Vector3: new (x?: number, y?: number, z?: number) => Vector3;
       Vector2: new (x?: number, y?: number) => Vector2;
       Raycaster: new () => Raycaster;
+      CanvasTexture: new (canvas: HTMLCanvasElement) => any;
+      SpriteMaterial: new (options?: any) => any;
+      Sprite: new (material?: any) => any;
     };
     PANOLENS: {
       Viewer: new (options?: PanolensViewerOptions) => PanolensViewer;

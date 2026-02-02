@@ -1,17 +1,22 @@
 {
   "name": "panorama-platform",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "node scripts/init-data.js && next start",
+    "start:prod": "next start",
+    "init-data": "node scripts/init-data.js",
     "lint": "eslint",
-    "check-deploy": "node scripts/check-deploy.js"
+    "check-deploy": "node scripts/check-deploy.js",
+    "release": "node scripts/release.js"
   },
   "dependencies": {
+    "archiver": "^7.0.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "extract-zip": "^2.0.1",
     "jose": "^6.1.3",
     "lucide-react": "^0.563.0",
     "next": "16.1.6",
@@ -28,6 +33,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/archiver": "^7.0.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

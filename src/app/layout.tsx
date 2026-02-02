@@ -9,8 +9,10 @@ const inter = Inter({
   subsets: ['latin', 'latin-ext'],
 });
 
+const appVersion = process.env.NEXT_PUBLIC_APP_VERSION ?? '0.0.0';
+
 export const metadata: Metadata = {
-  title: 'Panorama Viewer - CONCEPTFAB',
+  title: `Pano Viewer v: ${appVersion} - CONCEPTFAB`,
   description: 'Platforma do przeglądania panoram 360°',
 };
 
@@ -20,7 +22,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pl">
+    <html lang="pl" className="dark">
       <body className={`${inter.variable} font-sans antialiased`}>
         <AuthProvider>
           {children}

@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { Panorama } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -33,8 +34,18 @@ export function PanoramaList({ projectId, panoramas }: PanoramaListProps) {
               key={panorama.id}
               className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg"
             >
-              <div className="w-20 h-10 bg-zinc-200 dark:bg-zinc-700 rounded flex items-center justify-center flex-shrink-0">
-                <ImageIcon className="h-5 w-5 text-muted-foreground" />
+              <div className="relative w-20 h-10 bg-zinc-200 dark:bg-zinc-700 rounded flex items-center justify-center flex-shrink-0 overflow-hidden">
+                {panorama.thumbnail ? (
+                  <Image
+                    src={`/uploads/projects/${projectId}/thumbnails/${panorama.thumbnail}`}
+                    alt={panorama.name}
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
+                ) : (
+                  <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-medium truncate">{panorama.name}</p>

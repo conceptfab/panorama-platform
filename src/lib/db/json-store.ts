@@ -1,7 +1,8 @@
 import { promises as fs } from 'fs';
 import path from 'path';
+import { getDataRoot } from '@/lib/data-root';
 
-const DATA_DIR = path.join(process.cwd(), 'data');
+const DATA_DIR = path.join(getDataRoot(), 'data');
 
 export async function readJsonFile<T>(filename: string): Promise<T> {
   const filePath = path.join(DATA_DIR, filename);
@@ -16,7 +17,10 @@ export async function readJsonFile<T>(filename: string): Promise<T> {
   }
 }
 
-export async function writeJsonFile<T>(filename: string, data: T): Promise<void> {
+export async function writeJsonFile<T>(
+  filename: string,
+  data: T
+): Promise<void> {
   const filePath = path.join(DATA_DIR, filename);
   const content = JSON.stringify(data, null, 2);
   await fs.writeFile(filePath, content, 'utf-8');
