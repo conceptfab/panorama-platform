@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import archiver from 'archiver';
 import path from 'path';
 import { PassThrough } from 'stream';
@@ -8,7 +8,7 @@ import { getProjects } from '@/lib/db/projects';
 import { getDataRoot } from '@/lib/data-root';
 import { existsSync } from 'fs';
 
-export async function GET(_request: NextRequest) {
+export async function GET() {
   try {
     await requireAdmin();
 

@@ -31,10 +31,26 @@ const log = {
     console.log(
       `\n${colors.bold}${colors.cyan}═══ ${msg} ═══${colors.reset}\n`
     ),
+  errorBlock: (title, content, isWarning = false) => {
+    const color = isWarning ? colors.yellow : colors.red;
+    const lines = content.split('\n').filter(l => l.trim());
+    const maxLen = Math.min(80, Math.max(...lines.map(l => l.length), title.length + 4));
+    const border = '─'.repeat(maxLen);
+    console.log(`\n${color}┌${border}┐${colors.reset}`);
+    console.log(`${color}│${colors.reset} ${colors.bold}${color}${title}${colors.reset}${' '.repeat(Math.max(0, maxLen - title.length - 1))}${color}│${colors.reset}`);
+    console.log(`${color}├${border}┤${colors.reset}`);
+    lines.forEach(line => {
+      const trimmed = line.slice(0, maxLen - 2);
+      const padding = ' '.repeat(Math.max(0, maxLen - trimmed.length - 1));
+      console.log(`${color}│${colors.reset} ${trimmed}${padding}${color}│${colors.reset}`);
+    });
+    console.log(`${color}└${border}┘${colors.reset}\n`);
+  },
 };
 
 let errors = 0;
 let warnings = 0;
+const issues = []; // Collect all issues for summary
 
 function check(name, fn) {
   try {
@@ -44,13 +60,17 @@ function check(name, fn) {
     } else if (result === 'warn') {
       log.warn(name);
       warnings++;
+      issues.push({ type: 'warn', name });
     } else {
       log.error(name);
       errors++;
+      issues.push({ type: 'error', name });
     }
   } catch (e) {
-    log.error(`${name}: ${e.message}`);
+    log.error(name);
+    log.errorBlock('EXCEPTION', e.message);
     errors++;
+    issues.push({ type: 'error', name, detail: e.message });
   }
 }
 
@@ -106,7 +126,8 @@ check('TypeScript compilation', () => {
     exec('npx tsc --noEmit', { timeout: 60000 });
     return true;
   } catch (e) {
-    console.log(`\n${colors.red}${e.stdout || e.message}${colors.reset}`);
+    const output = e.stdout || e.stderr || e.message;
+    log.errorBlock('TYPESCRIPT ERRORS', output);
     return false;
   }
 });
@@ -119,11 +140,13 @@ check('ESLint validation', () => {
     return true;
   } catch (e) {
     const output = e.stdout || e.stderr || e.message;
-    if (output.includes('warning')) {
-      console.log(`\n${colors.yellow}${output}${colors.reset}`);
+    // Check for actual errors (not "0 errors")
+    const hasRealErrors = /[1-9]\d*\s+error/.test(output);
+    if (!hasRealErrors && output.includes('warning')) {
+      log.errorBlock('ESLINT WARNINGS', output, true);
       return 'warn';
     }
-    console.log(`\n${colors.red}${output}${colors.reset}`);
+    log.errorBlock('ESLINT ERRORS', output, false);
     return false;
   }
 });
@@ -136,9 +159,8 @@ check('Next.js production build', () => {
     exec('npm run build', { timeout: 180000 });
     return true;
   } catch (e) {
-    console.log(
-      `\n${colors.red}${e.stdout || e.stderr || e.message}${colors.reset}`
-    );
+    const output = e.stdout || e.stderr || e.message;
+    log.errorBlock('BUILD FAILED', output);
     return false;
   }
 });
@@ -213,10 +235,7 @@ check('No hardcoded localhost URLs in code', () => {
       'grep -r "localhost:3000" src/ --include="*.ts" --include="*.tsx" || true'
     );
     if (result.trim() && !result.includes('NEXT_PUBLIC_APP_URL')) {
-      console.log(
-        `\n${colors.yellow}Found localhost references:${colors.reset}`
-      );
-      console.log(result);
+      log.errorBlock('HARDCODED LOCALHOST FOUND', result, true);
       return 'warn';
     }
     return true;
@@ -250,16 +269,39 @@ if (errors === 0 && warnings === 0) {
   console.log(
     `${colors.green}${colors.bold}All checks passed! Ready for deployment.${colors.reset}\n`
   );
-} else if (errors === 0) {
-  console.log(
-    `${colors.yellow}${colors.bold}Passed with ${warnings} warning(s).${colors.reset}`
-  );
-  console.log('Review warnings before deploying.\n');
 } else {
-  console.log(
-    `${colors.red}${colors.bold}Failed with ${errors} error(s) and ${warnings} warning(s).${colors.reset}`
-  );
-  console.log('Fix errors before deploying.\n');
+  // Show issues list
+  if (issues.length > 0) {
+    const errorIssues = issues.filter(i => i.type === 'error');
+    const warnIssues = issues.filter(i => i.type === 'warn');
+
+    if (errorIssues.length > 0) {
+      console.log(`${colors.red}${colors.bold}ERRORS:${colors.reset}`);
+      errorIssues.forEach(i => {
+        console.log(`  ${colors.red}✗${colors.reset} ${i.name}`);
+        if (i.detail) console.log(`    ${colors.red}└─ ${i.detail}${colors.reset}`);
+      });
+      console.log('');
+    }
+
+    if (warnIssues.length > 0) {
+      console.log(`${colors.yellow}${colors.bold}WARNINGS:${colors.reset}`);
+      warnIssues.forEach(i => {
+        console.log(`  ${colors.yellow}⚠${colors.reset} ${i.name}`);
+      });
+      console.log('');
+    }
+  }
+
+  if (errors === 0) {
+    console.log(
+      `${colors.green}${colors.bold}Ready to deploy${colors.reset} ${colors.yellow}(${warnings} warning${warnings > 1 ? 's' : ''})${colors.reset}\n`
+    );
+  } else {
+    console.log(
+      `${colors.red}${colors.bold}Fix ${errors} error${errors > 1 ? 's' : ''} before deploying.${colors.reset}\n`
+    );
+  }
 }
 
 console.log(`${colors.bold}Railway Deployment Steps:${colors.reset}`);

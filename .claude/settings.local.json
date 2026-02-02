@@ -6,7 +6,8 @@
       "Bash(curl:*)",
       "Bash(ls:*)",
       "Bash(node scripts/fix-thumbnails.js:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(node scripts/check-deploy.js:*)"
     ]
   }
 }
