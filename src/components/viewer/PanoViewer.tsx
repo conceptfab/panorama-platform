@@ -1,7 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
+import Link from 'next/link';
 import { ProjectConfig } from '@/types';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
 import { SplashScreen } from './SplashScreen';
 import { ViewerControls } from './ViewerControls';
 import Script from 'next/script';
@@ -255,34 +258,34 @@ export function PanoViewer({
 
           ctx.drawImage(canvas, 0, 0);
 
-          // Add watermark (CONCEPTFAB 30% smaller, Pano 30% larger, version 1/3 of Pano)
+          // Watermark: jedna linia bazowa – CONCEPTFAB Pano v: x.y.z
           const appVersion =
             typeof process !== 'undefined'
               ? process.env.NEXT_PUBLIC_APP_VERSION ?? '0.0.0'
               : '0.0.0';
           const panoPart = ' Pano ';
-          const versionPart = `v: ${appVersion}`;
+          const versionPart = ` v: ${appVersion}`;
           const fontSize = Math.max(14, Math.round(w / 60));
           const smallFontSize = fontSize * 0.7;
           const panoFontSize = smallFontSize * 1.3;
-          const versionFontSize = 10;
+          const versionFontSize = Math.round(panoFontSize * 0.5);
           const xRight = w - Math.round(w * 0.04);
-          const y = Math.round(h * 0.03);
+          const baselineY = Math.round(h * 0.04);
           ctx.textAlign = 'right';
-          ctx.textBaseline = 'top';
+          ctx.textBaseline = 'alphabetic';
           ctx.shadowColor = 'rgba(0,0,0,0.6)';
           ctx.shadowBlur = 4;
           ctx.shadowOffsetX = 1;
           ctx.shadowOffsetY = 1;
           ctx.fillStyle = 'rgba(255,255,255,0.95)';
           ctx.font = `300 ${versionFontSize}px Inter, sans-serif`;
-          ctx.fillText(versionPart, xRight, y);
+          ctx.fillText(versionPart, xRight, baselineY);
           const versionWidth = ctx.measureText(versionPart).width;
           ctx.font = `300 ${panoFontSize}px Inter, sans-serif`;
-          ctx.fillText(panoPart, xRight - versionWidth, y);
+          ctx.fillText(panoPart, xRight - versionWidth, baselineY);
           const suffixWidth = ctx.measureText(panoPart).width + versionWidth;
           ctx.font = `300 ${smallFontSize}px Inter, sans-serif`;
-          ctx.fillText('CONCEPTFAB', xRight - suffixWidth, y);
+          ctx.fillText('CONCEPTFAB', xRight - suffixWidth, baselineY);
 
           let dataUrl;
           let ext = 'webp';
@@ -421,6 +424,20 @@ export function PanoViewer({
           id="panorama-container"
           className="w-full h-full"
         />
+
+        <Link
+          href="/gallery"
+          className="absolute top-6 left-6 z-40"
+          title="Powrót do galerii"
+        >
+          <Button
+            variant="secondary"
+            size="icon"
+            className="bg-black/50 hover:bg-black/70 text-white border-0 h-10 w-10"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+        </Link>
 
         {isLoading && (
           <SplashScreen

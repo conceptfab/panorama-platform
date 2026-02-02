@@ -21,7 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Pencil } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -34,6 +34,8 @@ export function UserTable({ users, groups }: UserTableProps) {
   const router = useRouter();
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -83,6 +85,30 @@ export function UserTable({ users, groups }: UserTableProps) {
     }
   };
 
+  const handleDeleteClick = (user: User) => setUserToDelete(user);
+
+  const handleDeleteConfirm = async () => {
+    if (!userToDelete) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/users/${userToDelete.id}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error || 'Nie udało się usunąć użytkownika');
+        return;
+      }
+      toast.success('Użytkownik usunięty');
+      setUserToDelete(null);
+      router.refresh();
+    } catch {
+      toast.error('Nie udało się usunąć użytkownika');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <>
       <Card>
@@ -125,7 +151,7 @@ export function UserTable({ users, groups }: UserTableProps) {
                       ? new Date(user.lastLoginAt).toLocaleString('pl-PL')
                       : 'Nigdy'}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="flex items-center gap-1">
                     <Button
                       variant="ghost"
                       size="icon"
@@ -135,6 +161,15 @@ export function UserTable({ users, groups }: UserTableProps) {
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      onClick={() => handleDeleteClick(user)}
+                      title="Usuń użytkownika"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -142,6 +177,44 @@ export function UserTable({ users, groups }: UserTableProps) {
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog
+        open={!!userToDelete}
+        onOpenChange={(open) => !open && setUserToDelete(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Usuń użytkownika</DialogTitle>
+          </DialogHeader>
+          {userToDelete && (
+            <div className="space-y-4 pt-2">
+              <p className="text-sm text-muted-foreground">
+                Czy na pewno usunąć użytkownika{' '}
+                <span className="font-medium text-foreground">
+                  {userToDelete.email}
+                </span>
+                ? Tej operacji nie można cofnąć.
+              </p>
+              <div className="flex gap-2 justify-end">
+                <Button
+                  variant="outline"
+                  onClick={() => setUserToDelete(null)}
+                  disabled={deleting}
+                >
+                  Anuluj
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleDeleteConfirm}
+                  disabled={deleting}
+                >
+                  {deleting ? 'Usuwanie…' : 'Usuń'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={isDialogOpen}

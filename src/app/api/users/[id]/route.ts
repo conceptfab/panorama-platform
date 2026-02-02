@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAdmin } from '@/lib/auth/session';
-import { getUserById, updateUser } from '@/lib/db/users';
+import { requireAdmin, getSession } from '@/lib/auth/session';
+import { getUserById, updateUser, deleteUser } from '@/lib/db/users';
 import { z } from 'zod';
 
 const updateUserSchema = z.object({
@@ -67,6 +67,42 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
     return NextResponse.json(
       { error: 'Failed to update user' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(_request: NextRequest, { params }: RouteParams) {
+  try {
+    const { id } = await params;
+    const session = await getSession();
+    await requireAdmin();
+
+    if (session?.userId === id) {
+      return NextResponse.json(
+        { error: 'Nie możesz usunąć własnego konta' },
+        { status: 400 }
+      );
+    }
+
+    const deleted = await deleteUser(id);
+    if (!deleted) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('Forbidden')) {
+      return NextResponse.json(
+        { error: 'Admin access required' },
+        { status: 403 }
+      );
+    }
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    return NextResponse.json(
+      { error: 'Failed to delete user' },
       { status: 500 }
     );
   }

@@ -18,7 +18,7 @@ export function SplashScreen({
         transitionDuration: `${fadeDuration}ms`,
       }}
     >
-      <div className="text-center">
+      <div className="w-full max-w-md px-4 text-center">
         <h1 className="text-white text-3xl font-semibold mb-4 flex flex-wrap items-baseline justify-center gap-2">
           <span className="text-[0.7em]">CONCEPTFAB</span>
           <span className="text-white/80 text-[0.91em] font-normal">
@@ -28,7 +28,9 @@ export function SplashScreen({
             </span>
           </span>
         </h1>
-        <p className="text-zinc-400 text-4xl font-thin mb-8">{projectName}</p>
+        <p className="text-zinc-400 text-4xl font-thin mb-8 text-center w-full">
+          {projectName}
+        </p>
 
         <div className="w-64 h-1 bg-zinc-800 rounded-full overflow-hidden">
           <div
