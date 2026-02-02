@@ -114,6 +114,11 @@ export function UserTable({ users, groups }: UserTableProps) {
       <Card>
         <CardHeader>
           <CardTitle>Lista użytkowników ({users.length})</CardTitle>
+          <p className="text-sm text-muted-foreground mt-1">
+            Aby dodać użytkownika do grupy: kliknij ikonę{' '}
+            <strong>ołówka</strong> przy danym użytkowniku, zaznacz grupy w
+            oknie i kliknij <strong>Zapisz</strong>.
+          </p>
         </CardHeader>
         <CardContent>
           <Table>
@@ -124,7 +129,7 @@ export function UserTable({ users, groups }: UserTableProps) {
                 <TableHead>Grupy</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Ostatnie logowanie</TableHead>
-                <TableHead className="w-[80px]">Akcje</TableHead>
+                <TableHead className="w-[100px]">Akcje</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -154,12 +159,13 @@ export function UserTable({ users, groups }: UserTableProps) {
                   <TableCell className="flex items-center gap-1">
                     <Button
                       variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
+                      size="sm"
+                      className="h-8 gap-1.5"
                       onClick={() => handleOpenDialog(user)}
-                      title="Edytuj grupy"
+                      title="Przypisz użytkownika do grup"
                     >
                       <Pencil className="h-4 w-4" />
+                      <span className="hidden sm:inline text-xs">Grupy</span>
                     </Button>
                     <Button
                       variant="ghost"
