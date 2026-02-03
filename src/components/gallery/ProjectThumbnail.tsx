@@ -14,16 +14,19 @@ interface ProjectThumbnailProps {
   size?: GridSize;
 }
 
-const sizeConfig: Record<GridSize, {
-  padding: string;
-  titleSize: string;
-  iconSize: string;
-  placeholderIcon: string;
-  hoverIcon: string;
-  badgeSize: string;
-  showDate: boolean;
-  gap: string;
-}> = {
+const sizeConfig: Record<
+  GridSize,
+  {
+    padding: string;
+    titleSize: string;
+    iconSize: string;
+    placeholderIcon: string;
+    hoverIcon: string;
+    badgeSize: string;
+    showDate: boolean;
+    gap: string;
+  }
+> = {
   large: {
     padding: 'p-4',
     titleSize: 'text-base',
@@ -56,7 +59,10 @@ const sizeConfig: Record<GridSize, {
   },
 };
 
-export function ProjectThumbnail({ project, size = 'large' }: ProjectThumbnailProps) {
+export function ProjectThumbnail({
+  project,
+  size = 'large',
+}: ProjectThumbnailProps) {
   const config = sizeConfig[size];
 
   return (
@@ -72,11 +78,29 @@ export function ProjectThumbnail({ project, size = 'large' }: ProjectThumbnailPr
             />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center">
-              <ImageIcon className={cn('text-muted-foreground/50', config.placeholderIcon)} />
+              <ImageIcon
+                className={cn(
+                  'text-muted-foreground/50',
+                  config.placeholderIcon
+                )}
+              />
             </div>
           )}
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-            <Eye className={cn('text-white opacity-0 group-hover:opacity-100 transition-opacity', config.hoverIcon)} />
+            <span
+              className={cn(
+                'flex items-center justify-center rounded-full bg-black/50 text-white shrink-0',
+                config.iconSize === 'h-8 w-8'
+                  ? 'h-9 w-9'
+                  : config.iconSize === 'h-6 w-6'
+                  ? 'h-7 w-7'
+                  : 'h-6 w-6'
+              )}
+              title="Otwórz panoramę"
+              aria-hidden
+            >
+              <Eye className={cn(config.hoverIcon)} />
+            </span>
           </div>
         </div>
         <CardHeader className={cn(config.padding, 'pb-1')}>
@@ -85,7 +109,12 @@ export function ProjectThumbnail({ project, size = 'large' }: ProjectThumbnailPr
           </CardTitle>
         </CardHeader>
         <CardContent className={cn(config.padding, 'pt-0')}>
-          <div className={cn('flex items-center', config.showDate ? 'justify-between' : 'justify-start')}>
+          <div
+            className={cn(
+              'flex items-center',
+              config.showDate ? 'justify-between' : 'justify-start'
+            )}
+          >
             <Badge variant="secondary" className={config.badgeSize}>
               {project.panoramaCount} {size === 'small' ? 'p.' : 'panoram'}
             </Badge>

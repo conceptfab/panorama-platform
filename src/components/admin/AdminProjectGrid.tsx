@@ -14,6 +14,8 @@ interface AdminProjectGridProps {
   groups: Group[];
   /** Ukryj grupy (np. widok edytora w Galerii) – płaska lista, bez sekcji i pasków na kartach */
   hideGroups?: boolean;
+  /** W trybie Edytora – opcje „Pobierz projekt” i „Usuń” na kartach są zablokowane (wyszarzone) */
+  disableDownload?: boolean;
 }
 
 const GRID_SIZE_KEY = 'admin-projects-grid-size';
@@ -43,6 +45,7 @@ export function AdminProjectGrid({
   projects,
   groups,
   hideGroups = false,
+  disableDownload = false,
 }: AdminProjectGridProps) {
   const [gridSize, setGridSize] = useState<GridSize>('large');
   const [mounted, setMounted] = useState(false);
@@ -111,6 +114,7 @@ export function AdminProjectGrid({
               project={project}
               size="large"
               groups={getProjectGroups(project)}
+              disableDownload={disableDownload}
             />
           ))}
         </div>
@@ -172,6 +176,7 @@ export function AdminProjectGrid({
                   project={project}
                   size={gridSize}
                   groups={getProjectGroups(project)}
+                  disableDownload={disableDownload}
                 />
               ))}
             </div>

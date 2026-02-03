@@ -43,6 +43,8 @@ interface ProjectCardProps {
   size?: GridSize;
   /** Jedna lub więcej grup – jedna: jeden pasek i nazwa; wiele: pasek podzielony na segmenty i wszystkie nazwy na dole */
   groups?: ProjectCardGroupInfo[];
+  /** W trybie Edytora – opcje „Pobierz projekt” i „Usuń” są zablokowane (wyszarzone) */
+  disableDownload?: boolean;
 }
 
 const sizeConfig: Record<
@@ -98,6 +100,7 @@ export function ProjectCard({
   project,
   size = 'large',
   groups: groupsProp,
+  disableDownload = false,
 }: ProjectCardProps) {
   const router = useRouter();
   const config = sizeConfig[size];
@@ -173,6 +176,17 @@ export function ProjectCard({
             />
           </div>
         )}
+        <Link
+          href={`/pano/${project.id}`}
+          className="absolute bottom-2 left-2 flex items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors z-10"
+          style={{
+            width: config.menuButtonSize,
+            height: config.menuButtonSize,
+          }}
+          title="Otwórz panoramę"
+        >
+          <Eye className={config.iconSize} />
+        </Link>
         <div className="absolute top-2 right-2">
           <Badge
             variant={project.isPublished ? 'default' : 'secondary'}
@@ -232,12 +246,19 @@ export function ProjectCard({
                   Edytor hotspotów
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleDownload}>
+              <DropdownMenuItem
+                disabled={disableDownload}
+                onClick={disableDownload ? undefined : handleDownload}
+              >
                 <Download className="h-4 w-4 mr-2" />
                 Pobierz projekt
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-red-600" onClick={handleDelete}>
+              <DropdownMenuItem
+                className="text-red-600"
+                disabled={disableDownload}
+                onClick={disableDownload ? undefined : handleDelete}
+              >
                 <Trash2 className="h-4 w-4 mr-2" />
                 Usuń
               </DropdownMenuItem>

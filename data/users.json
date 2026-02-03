@@ -17,7 +17,7 @@
       "role": "user",
       "isActive": true,
       "createdAt": "2026-02-02T19:23:51.551Z",
-      "lastLoginAt": "2026-02-02T19:23:51.554Z",
+      "lastLoginAt": "2026-02-03T19:16:03.290Z",
       "groupIds": [
         "group-f3efd3df"
       ]
@@ -28,7 +28,7 @@
       "role": "editor",
       "isActive": true,
       "createdAt": "2026-02-03T18:04:31.663Z",
-      "lastLoginAt": "2026-02-03T18:49:45.559Z",
+      "lastLoginAt": "2026-02-03T19:18:44.711Z",
       "groupIds": [
         "group-f3efd3df"
       ]

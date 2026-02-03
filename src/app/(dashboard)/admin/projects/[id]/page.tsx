@@ -50,6 +50,7 @@ export default async function ProjectEditPage({ params }: PageProps) {
         project={project}
         groups={groups}
         editorGroupIds={editorGroupIds}
+        groupsReadOnly={session.role === 'editor'}
       />
 
       <FileUploader projectId={id} />

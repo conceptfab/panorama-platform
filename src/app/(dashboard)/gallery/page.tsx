@@ -87,6 +87,7 @@ export default async function GalleryPage() {
           projects={projects}
           groups={groups}
           hideGroups={isEditor}
+          disableDownload={isEditor}
         />
       ) : (
         <ProjectGrid projects={projects} />

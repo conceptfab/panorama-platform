@@ -1,28 +1,30 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { verifySessionToken } from '@/lib/auth/jwt';
 
 // Routes that require authentication
 const protectedRoutes = ['/gallery', '/pano', '/admin'];
 // Routes that should redirect authenticated users
 const authRoutes = ['/login'];
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const sessionCookie = request.cookies.get('panorama-session');
 
-  // Check if route is protected
+  // Weryfikacja kryptograficzna tokena – sfałszowane ciasteczko nie przejdzie
+  const isValidSession =
+    sessionCookie && (await verifySessionToken(sessionCookie.value)) !== null;
+
   const isProtectedRoute = protectedRoutes.some((route) =>
     pathname.startsWith(route)
   );
   const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route));
 
-  // Redirect unauthenticated users from protected routes
-  if (isProtectedRoute && !sessionCookie) {
+  if (isProtectedRoute && !isValidSession) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // Redirect authenticated users from auth routes
-  if (isAuthRoute && sessionCookie) {
+  if (isAuthRoute && isValidSession) {
     return NextResponse.redirect(new URL('/', request.url));
   }
 

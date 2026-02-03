@@ -24,12 +24,15 @@ interface ProjectEditFormProps {
   groups: Group[];
   /** Dla edytora – tylko te grupy są wybieralne (jego grupy). */
   editorGroupIds?: string[];
+  /** W trybie Edytora – sekcja „Grupy (dostęp do projektu)” jest zablokowana (tylko do odczytu). */
+  groupsReadOnly?: boolean;
 }
 
 export function ProjectEditForm({
   project,
   groups,
   editorGroupIds,
+  groupsReadOnly = false,
 }: ProjectEditFormProps) {
   const selectableGroups = editorGroupIds
     ? groups.filter((g) => editorGroupIds.includes(g.id))
@@ -84,7 +87,7 @@ export function ProjectEditForm({
         body: JSON.stringify({
           name,
           description,
-          groupIds: selectedGroupIds,
+          ...(groupsReadOnly ? {} : { groupIds: selectedGroupIds }),
         }),
       });
 
@@ -159,9 +162,18 @@ export function ProjectEditForm({
               />
             </div>
 
-            <div className="space-y-2">
-              <Label>Grupy (dostęp do projektu)</Label>
-              <div className="border rounded-md p-3 max-h-[200px] overflow-y-auto space-y-2">
+            <div className={cn('space-y-2', groupsReadOnly && 'opacity-70')}>
+              <Label
+                className={groupsReadOnly ? 'cursor-not-allowed' : undefined}
+              >
+                Grupy (dostęp do projektu)
+              </Label>
+              <div
+                className={cn(
+                  'border rounded-md p-3 max-h-[200px] overflow-y-auto space-y-2',
+                  groupsReadOnly && 'pointer-events-none bg-muted/30'
+                )}
+              >
                 {selectableGroups.length === 0 ? (
                   <p className="text-sm text-muted-foreground">Brak grup.</p>
                 ) : (
@@ -169,7 +181,8 @@ export function ProjectEditForm({
                     <label
                       key={group.id}
                       className={cn(
-                        'flex items-center gap-2 cursor-pointer rounded px-2 py-1.5 hover:bg-muted/50',
+                        'flex items-center gap-2 rounded px-2 py-1.5',
+                        !groupsReadOnly && 'cursor-pointer hover:bg-muted/50',
                         selectedGroupIds.includes(group.id) && 'bg-muted/50'
                       )}
                     >
@@ -177,6 +190,7 @@ export function ProjectEditForm({
                         type="checkbox"
                         checked={selectedGroupIds.includes(group.id)}
                         onChange={() => toggleGroup(group.id)}
+                        disabled={groupsReadOnly}
                         className="h-4 w-4 rounded border-input"
                       />
                       <span

@@ -76,6 +76,7 @@ export default async function AdminProjectsPage() {
           projects={resolvedProjects}
           groups={groups}
           hideGroups={session.role === 'editor'}
+          disableDownload={session.role === 'editor'}
         />
       )}
 
