@@ -304,18 +304,26 @@ export async function rebuildProjects(): Promise<RebuildProjectsResult> {
 
     const existing = byId.get(id);
     if (existing) {
+      const customThumbPath = `/uploads/projects/${id}/thumbnails/thumb.webp`;
+      const keepCustomThumb =
+        existing.thumbnailUrl === customThumbPath &&
+        existsSync(path.join(UPLOADS_DIR, id, 'thumbnails', 'thumb.webp'));
+      const finalThumbnailUrl = keepCustomThumb
+        ? existing.thumbnailUrl
+        : thumbnailUrl;
+
       const changed =
         existing.name !== name ||
         existing.description !== description ||
         existing.panoramaCount !== panoramaCount ||
-        existing.thumbnailUrl !== thumbnailUrl;
+        existing.thumbnailUrl !== finalThumbnailUrl;
 
       newProjects.push({
         ...existing,
         name,
         description,
         panoramaCount,
-        thumbnailUrl,
+        thumbnailUrl: finalThumbnailUrl,
         configPath,
         updatedAt: now,
       });
