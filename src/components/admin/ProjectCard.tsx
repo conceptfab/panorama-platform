@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { Project } from '@/types';
 import {
   Card,
@@ -98,8 +99,35 @@ export function ProjectCard({
   size = 'large',
   groups: groupsProp,
 }: ProjectCardProps) {
+  const router = useRouter();
   const config = sizeConfig[size];
   const groups = groupsProp ?? [];
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (
+      !confirm(
+        `Czy na pewno usunąć projekt „${project.name}"? Nie można tego cofnąć.`
+      )
+    ) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/projects/${project.id}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Błąd usuwania');
+      }
+      toast.success(`Projekt „${project.name}" został usunięty.`);
+      router.refresh();
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : 'Nie udało się usunąć projektu'
+      );
+    }
+  };
 
   const handleDownload = () => {
     window.open(
@@ -209,7 +237,10 @@ export function ProjectCard({
                 Pobierz projekt
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-red-600">
+              <DropdownMenuItem
+                className="text-red-600"
+                onClick={handleDelete}
+              >
                 <Trash2 className="h-4 w-4 mr-2" />
                 Usuń
               </DropdownMenuItem>

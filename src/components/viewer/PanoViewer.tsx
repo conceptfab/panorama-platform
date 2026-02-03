@@ -34,6 +34,7 @@ export function PanoViewer({
   const [autoRotate, setAutoRotate] = useState(config.settings.autoRotate);
   const [threeLoaded, setThreeLoaded] = useState(false);
   const [, setCurrentPanoramaIndex] = useState(0);
+  const viewStartTimeRef = useRef<number | null>(null);
 
   /** Losowa prędkość 0.2–0.5, losowy kierunek. Zwraca czas pełnego obrotu w ms (Three.js autoRotateSpeed: 2 ≈ 30 s). */
   const applyRandomAutoRotate = useCallback(
@@ -235,6 +236,39 @@ export function PanoViewer({
     };
   }, []);
 
+  // Statystyki: view_start przy wejściu, view_end przy wyjściu (z czasem)
+  useEffect(() => {
+    if (!projectId) return;
+    viewStartTimeRef.current = Date.now();
+    fetch('/api/stats', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'view_start',
+        payload: {
+          type: 'view_start',
+          projectId,
+          projectName: config.projectName,
+        },
+      }),
+    }).catch(() => {});
+
+    return () => {
+      const start = viewStartTimeRef.current;
+      if (start != null) {
+        const durationSeconds = Math.round((Date.now() - start) / 1000);
+        fetch('/api/stats', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'view_end',
+            payload: { type: 'view_end', projectId, durationSeconds },
+          }),
+        }).catch(() => {});
+      }
+    };
+  }, [projectId, config.projectName]);
+
   const handleToggleAutoRotate = useCallback(() => {
     const viewer = viewerRef.current as {
       OrbitControls?: { autoRotate: boolean; autoRotateSpeed: number };
@@ -387,6 +421,21 @@ export function PanoViewer({
           a.download = name;
           a.href = dataUrl;
           a.click();
+
+          if (projectId) {
+            fetch('/api/stats', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                type: 'screenshot',
+                payload: {
+                  type: 'screenshot',
+                  projectId,
+                  projectName: config.projectName,
+                },
+              }),
+            }).catch(() => {});
+          }
         } finally {
           hidden.forEach((obj) => {
             obj.visible = true;
@@ -394,7 +443,7 @@ export function PanoViewer({
         }
       });
     });
-  }, [config.projectName]);
+  }, [config.projectName, projectId]);
 
   const handleGenerateThumbnail = useCallback(async () => {
     if (!projectId || !isAdmin) return;

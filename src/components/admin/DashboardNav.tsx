@@ -19,6 +19,7 @@ import {
   Users,
   Tags,
   FileText,
+  BarChart3,
   LogOut,
   Menu,
   Bug,
@@ -43,6 +44,7 @@ export function DashboardNav({ userRole, userEmail }: DashboardNavProps) {
         { href: '/admin/users', label: 'Użytkownicy', icon: Users },
         { href: '/admin/groups', label: 'Grupy', icon: Tags },
         { href: '/admin/files', label: 'Pliki', icon: FileText },
+        { href: '/admin/stats', label: 'Statystyki', icon: BarChart3 },
       ]
     : [{ href: '/gallery', label: 'Galeria', icon: LayoutGrid }];
 

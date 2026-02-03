@@ -259,3 +259,95 @@ async function getDirSizeParallel(dirPath: string): Promise<number> {
 
   return sizes.reduce((a, b) => a + b, 0);
 }
+
+export interface RebuildProjectsResult {
+  updated: number;
+  removed: number;
+  added: number;
+  projects: Project[];
+}
+
+/**
+ * Przebudowuje globalną listę projektów na podstawie folderów w uploads/projects/.
+ * - Tylko foldery na dysku = wpisy w liście (usuwa stare/orphaned wpisy).
+ * - Dla każdego folderu synchronizuje name, description, panoramaCount, thumbnailUrl z config.json.
+ * - Dla folderów bez wpisu w projects.json tworzy nowy wpis.
+ * Po zapisie wywołuje syncGroupsProjectIdsFromProjects().
+ */
+export async function rebuildProjects(): Promise<RebuildProjectsResult> {
+  let dirIds: string[];
+  try {
+    const entries = await fs.readdir(UPLOADS_DIR, { withFileTypes: true });
+    dirIds = entries.filter((e) => e.isDirectory()).map((e) => e.name);
+  } catch {
+    dirIds = [];
+  }
+
+  const currentProjects = await getProjects();
+  const byId = new Map(currentProjects.map((p) => [p.id, p]));
+
+  const newProjects: Project[] = [];
+  let updated = 0;
+  let added = 0;
+
+  for (const id of dirIds) {
+    const config = await getProjectConfig(id);
+    const name = config?.projectName ?? id;
+    const description = config?.description ?? '';
+    const panoramaCount = config?.panoramas?.length ?? 0;
+    let thumbnailUrl = '';
+    if (config?.panoramas?.length && config.panoramas[0].thumbnail) {
+      thumbnailUrl = `/uploads/projects/${id}/thumbnails/${config.panoramas[0].thumbnail}`;
+    }
+    const configPath = `/uploads/projects/${id}/config.json`;
+    const now = formatDate(new Date());
+
+    const existing = byId.get(id);
+    if (existing) {
+      const changed =
+        existing.name !== name ||
+        existing.description !== description ||
+        existing.panoramaCount !== panoramaCount ||
+        existing.thumbnailUrl !== thumbnailUrl;
+
+      newProjects.push({
+        ...existing,
+        name,
+        description,
+        panoramaCount,
+        thumbnailUrl,
+        configPath,
+        updatedAt: now,
+      });
+      if (changed) updated++;
+    } else {
+      newProjects.push({
+        id,
+        name,
+        description,
+        thumbnailUrl,
+        configPath,
+        createdAt: config?.createdAt ?? now,
+        updatedAt: now,
+        createdBy: 'system',
+        groupIds: [],
+        isPublished: false,
+        panoramaCount,
+      });
+      added++;
+    }
+  }
+
+  const dirIdSet = new Set(dirIds);
+  const removed = currentProjects.filter((p) => !dirIdSet.has(p.id)).length;
+
+  await writeJsonFile<ProjectsData>(PROJECTS_FILE, { projects: newProjects });
+  await syncGroupsProjectIdsFromProjects();
+
+  return {
+    updated,
+    removed,
+    added,
+    projects: newProjects,
+  };
+}

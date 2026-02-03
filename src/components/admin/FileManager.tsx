@@ -22,6 +22,7 @@ import {
   FolderOpen,
   Image as ImageIcon,
   Database,
+  RefreshCw,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatFileSize } from '@/utils/helpers';
@@ -41,6 +42,7 @@ export function FileManager({ projects }: FileManagerProps) {
   const [importName, setImportName] = useState('');
   const [importDescription, setImportDescription] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [rebuilding, setRebuilding] = useState(false);
 
   // Stats
   const totalSize = projects.reduce((sum, p) => sum + (p.size ?? 0), 0);
@@ -86,6 +88,25 @@ export function FileManager({ projects }: FileManagerProps) {
       );
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleRebuildProjects = async () => {
+    setRebuilding(true);
+    try {
+      const res = await fetch('/api/projects/rebuild', { method: 'POST' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || 'Błąd przebudowy');
+      }
+      toast.success(data.message ?? 'Lista projektów została przebudowana.');
+      router.refresh();
+    } catch (e) {
+      toast.error(
+        e instanceof Error ? e.message : 'Nie udało się przebudować projektów'
+      );
+    } finally {
+      setRebuilding(false);
     }
   };
 
@@ -187,6 +208,34 @@ export function FileManager({ projects }: FileManagerProps) {
                   >
                     <Upload className="h-4 w-4" />
                     Wgraj projekt
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* Rebuild projects */}
+            <div className="flex-1 p-4 border rounded-lg">
+              <div className="flex items-start gap-3">
+                <RefreshCw className="h-8 w-8 text-amber-500 shrink-0" />
+                <div className="flex-1">
+                  <h3 className="font-medium">Przebuduj projekty</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Zsynchronizuj listę projektów z folderami na dysku: usuń
+                    stare wpisy, zaktualizuj nazwy i liczbę panoram z
+                    config.json.
+                  </p>
+                  <Button
+                    variant="outline"
+                    className="mt-3 gap-2"
+                    onClick={handleRebuildProjects}
+                    disabled={rebuilding}
+                  >
+                    {rebuilding ? (
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-4 w-4" />
+                    )}
+                    Przebuduj projekty
                   </Button>
                 </div>
               </div>

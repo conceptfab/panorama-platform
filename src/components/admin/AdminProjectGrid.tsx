@@ -49,17 +49,18 @@ export function AdminProjectGrid({ projects, groups }: AdminProjectGridProps) {
 
   const sections = useMemo(() => {
     const result: { group: Group | null; projects: Project[] }[] = [];
+    const assignedIds = new Set<string>();
+
     for (const group of groups) {
-      const groupProjects = projects.filter((p) =>
-        p.groupIds.includes(group.id)
+      const groupProjects = projects.filter(
+        (p) => p.groupIds.includes(group.id) && !assignedIds.has(p.id)
       );
+      groupProjects.forEach((p) => assignedIds.add(p.id));
       if (groupProjects.length > 0) {
         result.push({ group, projects: groupProjects });
       }
     }
-    const assignedIds = new Set(
-      result.flatMap((s) => s.projects.map((p) => p.id))
-    );
+
     const ungrouped = projects.filter((p) => !assignedIds.has(p.id));
     if (ungrouped.length > 0) {
       result.push({ group: null, projects: ungrouped });
