@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 import sharp from 'sharp';
-import { requireAdmin } from '@/lib/auth/session';
+import { requireAdminOrEditor, editorCanEditProject } from '@/lib/auth/session';
 import {
   getProjectById,
   getProjectConfig,
   updateProjectConfig,
 } from '@/lib/db/projects';
+import { getUserById } from '@/lib/db/users';
 import { getDataRoot } from '@/lib/data-root';
 import { generateId } from '@/utils/helpers';
 import { Panorama } from '@/types';
@@ -18,7 +19,7 @@ const ALLOWED_TYPES = ['image/webp', 'image/jpeg', 'image/png'];
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAdmin();
+    const session = await requireAdminOrEditor();
 
     const formData = await request.formData();
     const projectId = formData.get('projectId') as string;
@@ -34,6 +35,12 @@ export async function POST(request: NextRequest) {
     const project = await getProjectById(projectId);
     if (!project) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+    }
+    if (session.role === 'editor') {
+      const user = await getUserById(session.userId);
+      if (!user || !editorCanEditProject(project.groupIds, user.groupIds)) {
+        return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+      }
     }
 
     if (files.length === 0) {
@@ -124,7 +131,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     if (error instanceof Error && error.message.includes('Forbidden')) {
       return NextResponse.json(
-        { error: 'Admin access required' },
+        { error: 'Wymagane uprawnienia admin lub edytor' },
         { status: 403 }
       );
     }

@@ -1,6 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback, createContext, useContext } from 'react';
+import {
+  useState,
+  useEffect,
+  useCallback,
+  createContext,
+  useContext,
+} from 'react';
 import { User } from '@/types';
 
 interface AuthContextType {
@@ -8,6 +14,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  isEditor: boolean;
   login: (email: string) => Promise<{ success: boolean; message: string }>;
   logout: () => Promise<void>;
   refreshSession: () => Promise<void>;
@@ -71,6 +78,7 @@ export function useAuthState() {
     isLoading,
     isAuthenticated: !!user,
     isAdmin: user?.role === 'admin',
+    isEditor: user?.role === 'editor',
     login,
     logout,
     refreshSession,

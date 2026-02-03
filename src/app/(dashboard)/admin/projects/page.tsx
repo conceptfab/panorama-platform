@@ -6,6 +6,7 @@ import {
   getProjectSize,
 } from '@/lib/db/projects';
 import { getGroups } from '@/lib/db/groups';
+import { getUserById } from '@/lib/db/users';
 import { Button } from '@/components/ui/button';
 import { AdminProjectGrid } from '@/components/admin/AdminProjectGrid';
 import { FileManager } from '@/components/admin/FileManager';
@@ -14,16 +15,28 @@ import { Plus } from 'lucide-react';
 
 export default async function AdminProjectsPage() {
   const session = await getSession();
-  if (!session || session.role !== 'admin') {
+  if (!session || (session.role !== 'admin' && session.role !== 'editor')) {
     redirect('/');
   }
 
-  const [projects, groups] = await Promise.all([
+  const [allProjects, groups] = await Promise.all([
     getProjectsWithExistingFolders(),
     getGroups(),
   ]);
+
+  let resolvedProjects: Project[];
+  if (session.role === 'editor') {
+    const user = await getUserById(session.userId);
+    resolvedProjects = user
+      ? allProjects.filter((p) =>
+          p.groupIds.some((gid) => user.groupIds.includes(gid))
+        )
+      : [];
+  } else {
+    resolvedProjects = allProjects;
+  }
   const projectsWithSize: (Project & { size?: number })[] = await Promise.all(
-    projects.map(async (p) => ({
+    resolvedProjects.map(async (p) => ({
       ...p,
       size: await getProjectSize(p.id),
     }))
@@ -33,9 +46,11 @@ export default async function AdminProjectsPage() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Projekty</h1>
+          <h1 className="text-3xl font-extralight">Projekty</h1>
           <p className="text-muted-foreground mt-1">
-            Zarządzaj projektami panoram
+            {session.role === 'editor'
+              ? 'Projekty w Twoich grupach – możesz je dodawać i edytować'
+              : 'Zarządzaj projektami panoram'}
           </p>
         </div>
         <Link href="/admin/projects/new">
@@ -46,7 +61,7 @@ export default async function AdminProjectsPage() {
         </Link>
       </div>
 
-      {projects.length === 0 ? (
+      {resolvedProjects.length === 0 ? (
         <div className="text-center py-16 border-2 border-dashed rounded-lg">
           <p className="text-muted-foreground">Brak projektów</p>
           <Link href="/admin/projects/new">
@@ -57,11 +72,10 @@ export default async function AdminProjectsPage() {
           </Link>
         </div>
       ) : (
-        <AdminProjectGrid projects={projects} groups={groups} />
+        <AdminProjectGrid projects={resolvedProjects} groups={groups} />
       )}
 
-      {/* Statystyki i operacje na danych – na dole strony Projekty */}
-      <FileManager projects={projectsWithSize} />
+      {session.role === 'admin' && <FileManager projects={projectsWithSize} />}
     </div>
   );
 }

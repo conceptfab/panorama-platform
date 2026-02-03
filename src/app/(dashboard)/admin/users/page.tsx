@@ -21,7 +21,7 @@ export default async function AdminUsersPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold">Użytkownicy</h1>
+        <h1 className="text-3xl font-extralight">Użytkownicy</h1>
         <p className="text-muted-foreground mt-1">
           Zarządzaj dostępem użytkowników
         </p>

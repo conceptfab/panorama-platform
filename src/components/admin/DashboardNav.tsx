@@ -17,7 +17,6 @@ import {
   LayoutGrid,
   FolderOpen,
   Users,
-  Tags,
   FileText,
   BarChart3,
   LogOut,
@@ -27,7 +26,7 @@ import {
 import { BugHunterDialog } from '@/components/auth/BugHunterDialog';
 
 interface DashboardNavProps {
-  userRole: 'admin' | 'user';
+  userRole: 'admin' | 'user' | 'editor';
   userEmail: string;
 }
 
@@ -37,14 +36,19 @@ export function DashboardNav({ userRole, userEmail }: DashboardNavProps) {
   const [bugHunterOpen, setBugHunterOpen] = useState(false);
 
   const isAdmin = userRole === 'admin';
+  const isEditor = userRole === 'editor';
 
   const navItems = isAdmin
     ? [
         { href: '/admin/projects', label: 'Projekty', icon: FolderOpen },
         { href: '/admin/users', label: 'Użytkownicy', icon: Users },
-        { href: '/admin/groups', label: 'Grupy', icon: Tags },
         { href: '/admin/files', label: 'Pliki', icon: FileText },
         { href: '/admin/stats', label: 'Statystyki', icon: BarChart3 },
+      ]
+    : isEditor
+    ? [
+        { href: '/gallery', label: 'Galeria', icon: LayoutGrid },
+        { href: '/admin/projects', label: 'Projekty', icon: FolderOpen },
       ]
     : [{ href: '/gallery', label: 'Galeria', icon: LayoutGrid }];
 
@@ -91,7 +95,7 @@ export function DashboardNav({ userRole, userEmail }: DashboardNavProps) {
           </div>
 
           <div className="flex items-center gap-4">
-            {!isAdmin && (
+            {!isAdmin && !isEditor && (
               <>
                 <Button
                   variant="ghost"
@@ -144,7 +148,11 @@ export function DashboardNav({ userRole, userEmail }: DashboardNavProps) {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem disabled className="text-muted-foreground">
-                  {isAdmin ? 'Administrator' : 'Użytkownik'}
+                  {isAdmin
+                    ? 'Administrator'
+                    : isEditor
+                    ? 'Edytor'
+                    : 'Użytkownik'}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem

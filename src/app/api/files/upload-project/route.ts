@@ -3,8 +3,9 @@ import path from 'path';
 import { promises as fs } from 'fs';
 import os from 'os';
 import extract from 'extract-zip';
-import { requireAdmin } from '@/lib/auth/session';
+import { requireAdminOrEditor } from '@/lib/auth/session';
 import { createProject, updateProjectConfig } from '@/lib/db/projects';
+import { getUserById } from '@/lib/db/users';
 import { getDataRoot } from '@/lib/data-root';
 import { projectConfigSchema } from '@/utils/validation';
 import { ensureDir } from '@/lib/db/json-store';
@@ -49,7 +50,7 @@ export async function POST(request: NextRequest) {
   let tempDir: string | null = null;
 
   try {
-    const session = await requireAdmin();
+    const session = await requireAdminOrEditor();
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
 
@@ -111,7 +112,20 @@ export async function POST(request: NextRequest) {
     }
 
     const projectConfig = validated.data;
-    const createdBy = session?.userId ?? 'user-001';
+    const createdBy = session.userId;
+
+    let groupIds: string[] = [];
+    if (session.role === 'editor') {
+      const user = await getUserById(session.userId);
+      if (!user || user.groupIds.length === 0) {
+        await fs.rm(tempDir, { recursive: true, force: true }).catch(() => {});
+        return NextResponse.json(
+          { error: 'Edytor musi być przypisany do co najmniej jednej grupy' },
+          { status: 403 }
+        );
+      }
+      groupIds = user.groupIds;
+    }
 
     const importName = (formData.get('name') as string | null)?.trim();
     const projectName = importName || projectConfig.projectName;
@@ -123,7 +137,7 @@ export async function POST(request: NextRequest) {
       projectName,
       projectDescription,
       createdBy,
-      []
+      groupIds
     );
 
     const root = getDataRoot();
@@ -181,7 +195,7 @@ export async function POST(request: NextRequest) {
     }
     if (error instanceof Error && error.message.includes('Forbidden')) {
       return NextResponse.json(
-        { error: 'Admin access required' },
+        { error: 'Wymagane uprawnienia admin lub edytor' },
         { status: 403 }
       );
     }

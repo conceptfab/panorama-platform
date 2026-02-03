@@ -27,7 +27,7 @@ export async function getUserByEmail(email: string): Promise<User | null> {
 
 export async function createUser(
   email: string,
-  role: 'admin' | 'user' = 'user',
+  role: 'admin' | 'user' | 'editor' = 'user',
   groupIds: string[] = []
 ): Promise<User> {
   const users = await getUsers();

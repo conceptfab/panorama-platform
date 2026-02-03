@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession, requireAdmin } from '@/lib/auth/session';
-import { getProjectById, getProjectConfig, updateProjectConfig } from '@/lib/db/projects';
+import {
+  getSession,
+  requireAdminOrEditor,
+  editorCanEditProject,
+} from '@/lib/auth/session';
+import {
+  getProjectById,
+  getProjectConfig,
+  updateProjectConfig,
+} from '@/lib/db/projects';
 import { getUserById } from '@/lib/db/users';
 import { projectConfigSchema } from '@/utils/validation';
 
@@ -21,18 +29,20 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
-    // Check access for non-admin users
-    if (session.role !== 'admin') {
+    if (session.role !== 'admin' && session.role !== 'editor') {
       const user = await getUserById(session.userId);
       if (!user) {
         return NextResponse.json({ error: 'User not found' }, { status: 404 });
       }
-
       const hasAccess =
         project.isPublished &&
         project.groupIds.some((gid) => user.groupIds.includes(gid));
-
       if (!hasAccess) {
+        return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+      }
+    } else if (session.role === 'editor') {
+      const user = await getUserById(session.userId);
+      if (!user || !editorCanEditProject(project.groupIds, user.groupIds)) {
         return NextResponse.json({ error: 'Access denied' }, { status: 403 });
       }
     }
@@ -55,20 +65,37 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
-    await requireAdmin();
+    const session = await requireAdminOrEditor();
+
+    const project = await getProjectById(id);
+    if (!project) {
+      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+    }
+    if (session.role === 'editor') {
+      const user = await getUserById(session.userId);
+      if (!user || !editorCanEditProject(project.groupIds, user.groupIds)) {
+        return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+      }
+    }
 
     const body = await request.json();
     const config = projectConfigSchema.parse(body);
 
     const success = await updateProjectConfig(id, config);
     if (!success) {
-      return NextResponse.json({ error: 'Failed to update config' }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Failed to update config' },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof Error && error.message.includes('Forbidden')) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+      return NextResponse.json(
+        { error: 'Wymagane uprawnienia admin lub edytor' },
+        { status: 403 }
+      );
     }
     if (error instanceof Error && error.message === 'Unauthorized') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

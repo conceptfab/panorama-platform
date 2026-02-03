@@ -15,7 +15,7 @@ export default async function AdminGroupsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold">Grupy</h1>
+        <h1 className="text-3xl font-extralight">Grupy</h1>
         <p className="text-muted-foreground mt-1">
           Zarządzaj grupami i przypisanymi projektami
         </p>

@@ -4,7 +4,7 @@ import { getUserById, updateUser, deleteUser } from '@/lib/db/users';
 import { z } from 'zod';
 
 const updateUserSchema = z.object({
-  role: z.enum(['admin', 'user']).optional(),
+  role: z.enum(['admin', 'user', 'editor']).optional(),
   isActive: z.boolean().optional(),
   groupIds: z.array(z.string()).optional(),
 });

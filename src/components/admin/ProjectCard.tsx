@@ -139,9 +139,9 @@ export function ProjectCard({
   };
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden pt-0 gap-0">
       {groups.length > 0 && (
-        <div className="h-1 shrink-0 flex" aria-hidden>
+        <div className="h-2 shrink-0 flex" aria-hidden>
           {groups.length === 1 ? (
             <div
               className="flex-1 min-w-0"
@@ -158,7 +158,7 @@ export function ProjectCard({
           )}
         </div>
       )}
-      <div className="relative aspect-video bg-zinc-100 dark:bg-zinc-800">
+      <div className="relative aspect-video bg-zinc-100 dark:bg-zinc-800 shrink-0">
         {project.thumbnailUrl ? (
           <Image
             src={project.thumbnailUrl}
@@ -189,7 +189,7 @@ export function ProjectCard({
         </div>
       </div>
 
-      <CardHeader className={cn(config.padding, 'pb-2')}>
+      <CardHeader className={cn(config.padding, 'pb-2', 'pt-3')}>
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
             <CardTitle className={cn('line-clamp-1', config.titleSize)}>
@@ -237,10 +237,7 @@ export function ProjectCard({
                 Pobierz projekt
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="text-red-600"
-                onClick={handleDelete}
-              >
+              <DropdownMenuItem className="text-red-600" onClick={handleDelete}>
                 <Trash2 className="h-4 w-4 mr-2" />
                 Usuń
               </DropdownMenuItem>

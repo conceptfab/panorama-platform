@@ -1,6 +1,8 @@
 import { redirect, notFound } from 'next/navigation';
 import { getSession } from '@/lib/auth/session';
+import { editorCanEditProject } from '@/lib/auth/session';
 import { getProjectById, getProjectConfig } from '@/lib/db/projects';
+import { getUserById } from '@/lib/db/users';
 import { HotspotEditor } from '@/components/editor/HotspotEditor';
 
 interface PageProps {
@@ -9,7 +11,7 @@ interface PageProps {
 
 export default async function HotspotEditorPage({ params }: PageProps) {
   const session = await getSession();
-  if (!session || session.role !== 'admin') {
+  if (!session || (session.role !== 'admin' && session.role !== 'editor')) {
     redirect('/');
   }
 
@@ -19,11 +21,20 @@ export default async function HotspotEditorPage({ params }: PageProps) {
     notFound();
   }
 
+  if (session.role === 'editor') {
+    const user = await getUserById(session.userId);
+    if (!user || !editorCanEditProject(project.groupIds, user.groupIds)) {
+      redirect('/admin/projects');
+    }
+  }
+
   const config = await getProjectConfig(id);
   if (!config) {
     return (
       <div className="text-center py-16">
-        <p className="text-muted-foreground">Nie znaleziono konfiguracji projektu</p>
+        <p className="text-muted-foreground">
+          Nie znaleziono konfiguracji projektu
+        </p>
       </div>
     );
   }

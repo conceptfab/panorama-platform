@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { mkdir } from 'fs/promises';
 import path from 'path';
 import sharp from 'sharp';
-import { requireAdmin } from '@/lib/auth/session';
+import { requireAdminOrEditor, editorCanEditProject } from '@/lib/auth/session';
 import { getProjectById, updateProject } from '@/lib/db/projects';
+import { getUserById } from '@/lib/db/users';
 import { getDataRoot } from '@/lib/data-root';
 
 interface RouteParams {
@@ -12,13 +13,19 @@ interface RouteParams {
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
-    await requireAdmin();
+    const session = await requireAdminOrEditor();
 
     const { id: projectId } = await params;
     const project = await getProjectById(projectId);
 
     if (!project) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+    }
+    if (session.role === 'editor') {
+      const user = await getUserById(session.userId);
+      if (!user || !editorCanEditProject(project.groupIds, user.groupIds)) {
+        return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+      }
     }
 
     const body = await request.json();
@@ -36,7 +43,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const buffer = Buffer.from(base64Data, 'base64');
 
     // Setup directories
-    const projectDir = path.join(getDataRoot(), 'uploads', 'projects', projectId);
+    const projectDir = path.join(
+      getDataRoot(),
+      'uploads',
+      'projects',
+      projectId
+    );
     const thumbnailsDir = path.join(projectDir, 'thumbnails');
     await mkdir(thumbnailsDir, { recursive: true });
 
@@ -58,7 +70,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   } catch (error) {
     if (error instanceof Error && error.message.includes('Forbidden')) {
       return NextResponse.json(
-        { error: 'Admin access required' },
+        { error: 'Wymagane uprawnienia admin lub edytor' },
         { status: 403 }
       );
     }

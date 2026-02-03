@@ -1,5 +1,5 @@
 import { getSession } from '@/lib/auth/session';
-import { getProjectsForUser } from '@/lib/db/projects';
+import { getProjects, getProjectsForUser } from '@/lib/db/projects';
 import { getUserById } from '@/lib/db/users';
 import { ProjectGrid } from '@/components/gallery/ProjectGrid';
 
@@ -7,15 +7,19 @@ export default async function GalleryPage() {
   const session = await getSession();
   if (!session) return null;
 
-  const user = await getUserById(session.userId);
-  if (!user) return null;
-
-  const projects = await getProjectsForUser(user.groupIds);
+  let projects;
+  if (session.role === 'admin') {
+    projects = await getProjects();
+  } else {
+    const user = await getUserById(session.userId);
+    if (!user) return null;
+    projects = await getProjectsForUser(user.groupIds);
+  }
 
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">Galeria projektów</h1>
+        <h1 className="text-3xl font-extralight">Galeria projektów</h1>
         <p className="text-muted-foreground mt-1">
           Wybierz projekt, aby rozpocząć przeglądanie panoram
         </p>

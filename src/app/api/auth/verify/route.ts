@@ -53,7 +53,10 @@ export async function POST(request: NextRequest) {
     await createSession(user);
 
     // Return redirect URL
-    const redirectUrl = user.role === 'admin' ? '/admin/projects' : '/gallery';
+    const redirectUrl =
+      user.role === 'admin' || user.role === 'editor'
+        ? '/admin/projects'
+        : '/gallery';
 
     return NextResponse.json({
       success: true,

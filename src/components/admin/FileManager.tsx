@@ -113,45 +113,49 @@ export function FileManager({ projects }: FileManagerProps) {
   return (
     <>
       {/* Storage Stats – 3 kolumny: Projekty | Całkowity rozmiar | Panoramy */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Projekty</CardTitle>
-            <FolderOpen className="h-4 w-4 text-muted-foreground" />
+      <div className="grid gap-3 md:grid-cols-3">
+        <Card className="border-muted/60 py-2 gap-0">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 px-4 py-1">
+            <CardTitle className="text-xs font-medium text-muted-foreground">
+              Projekty
+            </CardTitle>
+            <FolderOpen className="h-3.5 w-3.5 text-muted-foreground/70" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{projectCount}</div>
-            <p className="text-xs text-muted-foreground">
+          <CardContent className="px-4 pt-0 pb-2">
+            <div className="text-lg font-semibold">{projectCount}</div>
+            <p className="text-[11px] text-muted-foreground">
               Łączna liczba projektów
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+        <Card className="border-muted/60 py-2 gap-0">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 px-4 py-1">
+            <CardTitle className="text-xs font-medium text-muted-foreground">
               Całkowity rozmiar
             </CardTitle>
-            <HardDrive className="h-4 w-4 text-muted-foreground" />
+            <HardDrive className="h-3.5 w-3.5 text-muted-foreground/70" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
+          <CardContent className="px-4 pt-0 pb-2">
+            <div className="text-lg font-semibold">
               {formatFileSize(totalSize)}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-[11px] text-muted-foreground">
               Wszystkie projekty i pliki
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Panoramy</CardTitle>
-            <ImageIcon className="h-4 w-4 text-muted-foreground" />
+        <Card className="border-muted/60 py-2 gap-0">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 px-4 py-1">
+            <CardTitle className="text-xs font-medium text-muted-foreground">
+              Panoramy
+            </CardTitle>
+            <ImageIcon className="h-3.5 w-3.5 text-muted-foreground/70" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalPanoramas}</div>
-            <p className="text-xs text-muted-foreground">
+          <CardContent className="px-4 pt-0 pb-2">
+            <div className="text-lg font-semibold">{totalPanoramas}</div>
+            <p className="text-[11px] text-muted-foreground">
               Łączna liczba panoram
             </p>
           </CardContent>
@@ -159,32 +163,34 @@ export function FileManager({ projects }: FileManagerProps) {
       </div>
 
       {/* Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Database className="h-5 w-5" />
+      <Card className="border-muted/60 py-2 gap-0">
+        <CardHeader className="px-4 py-1.5">
+          <CardTitle className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
+            <Database className="h-3.5 w-3.5" />
             Operacje na danych
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-col sm:flex-row gap-4">
+        <CardContent className="space-y-2 px-4 pb-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             {/* Backup All */}
-            <div className="flex-1 p-4 border rounded-lg">
-              <div className="flex items-start gap-3">
-                <Archive className="h-8 w-8 text-blue-500 shrink-0" />
-                <div className="flex-1">
-                  <h3 className="font-medium">Backup wszystkich projektów</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Pobierz archiwum ZIP zawierające wszystkie projekty,
-                    konfiguracje i pliki.
+            <div className="flex-1 p-2 border border-muted/50 rounded-md bg-muted/20">
+              <div className="flex items-start gap-2">
+                <Archive className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm font-medium">
+                    Backup wszystkich projektów
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Pobierz archiwum ZIP ze wszystkimi projektami i plikami.
                   </p>
                   <Button
-                    variant="outline"
-                    className="mt-3 gap-2"
+                    variant="ghost"
+                    size="sm"
+                    className="mt-1.5 h-7 gap-1.5 text-xs"
                     onClick={handleBackupAll}
                     disabled={projectCount === 0}
                   >
-                    <Archive className="h-4 w-4" />
+                    <Archive className="h-3 w-3" />
                     Pobierz backup ({formatFileSize(totalSize)})
                   </Button>
                 </div>
@@ -192,21 +198,24 @@ export function FileManager({ projects }: FileManagerProps) {
             </div>
 
             {/* Import Project */}
-            <div className="flex-1 p-4 border rounded-lg">
-              <div className="flex items-start gap-3">
-                <Upload className="h-8 w-8 text-green-500 shrink-0" />
-                <div className="flex-1">
-                  <h3 className="font-medium">Importuj projekt z ZIP</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Wgraj archiwum ZIP z gotowym projektem (config.json,
-                    panoramas/, thumbnails/).
+            <div className="flex-1 p-2 border border-muted/50 rounded-md bg-muted/20">
+              <div className="flex items-start gap-2">
+                <Upload className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm font-medium">
+                    Importuj projekt z ZIP
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Wgraj ZIP z gotowym projektem (config.json, panoramas/,
+                    thumbnails/).
                   </p>
                   <Button
-                    variant="outline"
-                    className="mt-3 gap-2"
+                    variant="ghost"
+                    size="sm"
+                    className="mt-1.5 h-7 gap-1.5 text-xs"
                     onClick={() => setUploadDialogOpen(true)}
                   >
-                    <Upload className="h-4 w-4" />
+                    <Upload className="h-3 w-3" />
                     Wgraj projekt
                   </Button>
                 </div>
@@ -214,26 +223,25 @@ export function FileManager({ projects }: FileManagerProps) {
             </div>
 
             {/* Rebuild projects */}
-            <div className="flex-1 p-4 border rounded-lg">
-              <div className="flex items-start gap-3">
-                <RefreshCw className="h-8 w-8 text-amber-500 shrink-0" />
-                <div className="flex-1">
-                  <h3 className="font-medium">Przebuduj projekty</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Zsynchronizuj listę projektów z folderami na dysku: usuń
-                    stare wpisy, zaktualizuj nazwy i liczbę panoram z
-                    config.json.
+            <div className="flex-1 p-2 border border-muted/50 rounded-md bg-muted/20">
+              <div className="flex items-start gap-2">
+                <RefreshCw className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm font-medium">Przebuduj projekty</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Zsynchronizuj listę z folderami na dysku.
                   </p>
                   <Button
-                    variant="outline"
-                    className="mt-3 gap-2"
+                    variant="ghost"
+                    size="sm"
+                    className="mt-1.5 h-7 gap-1.5 text-xs"
                     onClick={handleRebuildProjects}
                     disabled={rebuilding}
                   >
                     {rebuilding ? (
-                      <RefreshCw className="h-4 w-4 animate-spin" />
+                      <RefreshCw className="h-3 w-3 animate-spin" />
                     ) : (
-                      <RefreshCw className="h-4 w-4" />
+                      <RefreshCw className="h-3 w-3" />
                     )}
                     Przebuduj projekty
                   </Button>
@@ -243,10 +251,10 @@ export function FileManager({ projects }: FileManagerProps) {
           </div>
 
           {projectCount === 0 && (
-            <div className="text-center py-8 border-2 border-dashed rounded-lg text-muted-foreground">
-              <FolderOpen className="h-12 w-12 mx-auto mb-2 opacity-50" />
-              <p>Brak projektów</p>
-              <p className="text-sm mt-1">
+            <div className="text-center py-4 border border-dashed border-muted/50 rounded-md text-muted-foreground">
+              <FolderOpen className="h-6 w-6 mx-auto mb-1 opacity-40" />
+              <p className="text-sm">Brak projektów</p>
+              <p className="text-xs mt-0.5">
                 Utwórz projekt w zakładce Projekty lub wgraj gotowy projekt
                 (ZIP).
               </p>

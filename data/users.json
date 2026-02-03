@@ -21,6 +21,17 @@
       "groupIds": [
         "group-f3efd3df"
       ]
+    },
+    {
+      "id": "user-09071eb5",
+      "email": "michal@kleniewski.com",
+      "role": "editor",
+      "isActive": true,
+      "createdAt": "2026-02-03T18:04:31.663Z",
+      "lastLoginAt": "2026-02-03T18:04:31.668Z",
+      "groupIds": [
+        "group-f3efd3df"
+      ]
     }
   ]
 }

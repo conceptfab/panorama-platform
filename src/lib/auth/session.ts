@@ -52,3 +52,20 @@ export async function requireAdmin(): Promise<TokenPayload> {
   }
   return session;
 }
+
+/** Admin lub edytor – do zarządzania projektami (edytor tylko w obrębie swoich grup). */
+export async function requireAdminOrEditor(): Promise<TokenPayload> {
+  const session = await requireAuth();
+  if (session.role !== 'admin' && session.role !== 'editor') {
+    throw new Error('Forbidden: Admin or Editor access required');
+  }
+  return session;
+}
+
+/** Czy edytor może edytować projekt (projekt należy do co najmniej jednej grupy użytkownika). */
+export function editorCanEditProject(
+  projectGroupIds: string[],
+  userGroupIds: string[]
+): boolean {
+  return projectGroupIds.some((gid) => userGroupIds.includes(gid));
+}

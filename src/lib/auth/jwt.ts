@@ -11,10 +11,12 @@ const JWT_EXPIRATION = process.env.JWT_EXPIRATION || '7d';
 export interface TokenPayload extends JWTPayload {
   userId: string;
   email: string;
-  role: 'admin' | 'user';
+  role: 'admin' | 'user' | 'editor';
 }
 
-export async function createSessionToken(payload: Omit<TokenPayload, 'iat' | 'exp'>): Promise<string> {
+export async function createSessionToken(
+  payload: Omit<TokenPayload, 'iat' | 'exp'>
+): Promise<string> {
   return new SignJWT({ ...payload })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
@@ -22,7 +24,9 @@ export async function createSessionToken(payload: Omit<TokenPayload, 'iat' | 'ex
     .sign(JWT_SECRET);
 }
 
-export async function verifySessionToken(token: string): Promise<TokenPayload | null> {
+export async function verifySessionToken(
+  token: string
+): Promise<TokenPayload | null> {
   try {
     const { payload } = await jwtVerify(token, JWT_SECRET);
     return payload as TokenPayload;

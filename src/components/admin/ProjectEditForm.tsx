@@ -22,9 +22,18 @@ import { cn } from '@/lib/utils';
 interface ProjectEditFormProps {
   project: Project;
   groups: Group[];
+  /** Dla edytora – tylko te grupy są wybieralne (jego grupy). */
+  editorGroupIds?: string[];
 }
 
-export function ProjectEditForm({ project, groups }: ProjectEditFormProps) {
+export function ProjectEditForm({
+  project,
+  groups,
+  editorGroupIds,
+}: ProjectEditFormProps) {
+  const selectableGroups = editorGroupIds
+    ? groups.filter((g) => editorGroupIds.includes(g.id))
+    : groups;
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
@@ -153,10 +162,10 @@ export function ProjectEditForm({ project, groups }: ProjectEditFormProps) {
             <div className="space-y-2">
               <Label>Grupy (dostęp do projektu)</Label>
               <div className="border rounded-md p-3 max-h-[200px] overflow-y-auto space-y-2">
-                {groups.length === 0 ? (
+                {selectableGroups.length === 0 ? (
                   <p className="text-sm text-muted-foreground">Brak grup.</p>
                 ) : (
-                  groups.map((group) => (
+                  selectableGroups.map((group) => (
                     <label
                       key={group.id}
                       className={cn(

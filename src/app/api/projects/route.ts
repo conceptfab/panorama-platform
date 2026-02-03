@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession, requireAdmin } from '@/lib/auth/session';
+import { getSession, requireAdminOrEditor } from '@/lib/auth/session';
 import {
   getProjects,
   getProjectsForUser,
@@ -41,12 +41,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ projects });
     }
 
-    // Regular users only see published projects for their groups
     const user = await getUserById(session.userId);
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
+    // Edytor widzi projekty ze swoich grup (wszystkie, nie tylko opublikowane)
+    if (session.role === 'editor') {
+      const allProjects = await getProjects();
+      const projects = allProjects.filter((p) =>
+        p.groupIds.some((gid) => user.groupIds.includes(gid))
+      );
+      return NextResponse.json({ projects });
+    }
+
+    // Zwykły użytkownik – tylko opublikowane projekty ze swoich grup
     const projects = await getProjectsForUser(user.groupIds);
     return NextResponse.json({ projects });
   } catch (error) {
@@ -60,17 +69,47 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await requireAdmin();
+    const session = await requireAdminOrEditor();
 
     const body = await request.json();
-    const { name, description, groupIds } = createProjectSchema.parse(body);
+    const parsed = createProjectSchema.parse(body);
+    const { name, description } = parsed;
+    let groupIds = parsed.groupIds;
 
-    const project = await createProject(name, description, session.userId, groupIds);
+    if (session.role === 'editor') {
+      const user = await getUserById(session.userId);
+      if (!user) {
+        return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      }
+      if (groupIds.length === 0) {
+        groupIds = user.groupIds;
+      }
+      const allowed = groupIds.every((gid) => user.groupIds.includes(gid));
+      if (!allowed || groupIds.length === 0) {
+        return NextResponse.json(
+          {
+            error:
+              'Projekt musi być przypisany do co najmniej jednej z Twoich grup',
+          },
+          { status: 403 }
+        );
+      }
+    }
+
+    const project = await createProject(
+      name,
+      description,
+      session.userId,
+      groupIds
+    );
 
     return NextResponse.json({ project }, { status: 201 });
   } catch (error) {
     if (error instanceof Error && error.message.includes('Forbidden')) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+      return NextResponse.json(
+        { error: 'Wymagane uprawnienia admin lub edytor' },
+        { status: 403 }
+      );
     }
     if (error instanceof Error && error.message === 'Unauthorized') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

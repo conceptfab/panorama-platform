@@ -41,6 +41,9 @@ interface UserTableProps {
 export function UserTable({ users, groups }: UserTableProps) {
   const router = useRouter();
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editingRole, setEditingRole] = useState<'user' | 'admin' | 'editor'>(
+    'user'
+  );
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -50,7 +53,9 @@ export function UserTable({ users, groups }: UserTableProps) {
   // Stan dla dialogu dodawania użytkownika
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newUserEmail, setNewUserEmail] = useState('');
-  const [newUserRole, setNewUserRole] = useState<'user' | 'admin'>('user');
+  const [newUserRole, setNewUserRole] = useState<'user' | 'admin' | 'editor'>(
+    'user'
+  );
   const [newUserGroupIds, setNewUserGroupIds] = useState<string[]>([]);
   const [addToWhitelist, setAddToWhitelist] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -65,6 +70,7 @@ export function UserTable({ users, groups }: UserTableProps) {
   const handleOpenDialog = (user: User) => {
     setEditingUser(user);
     setSelectedGroupIds([...user.groupIds]);
+    setEditingRole(user.role);
     setIsDialogOpen(true);
   };
 
@@ -96,7 +102,7 @@ export function UserTable({ users, groups }: UserTableProps) {
       const res = await fetch(`/api/users/${editingUser.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ groupIds: selectedGroupIds }),
+        body: JSON.stringify({ groupIds: selectedGroupIds, role: editingRole }),
       });
       if (!res.ok) throw new Error('Failed to update user');
       toast.success('Grupy użytkownika zaktualizowane');
@@ -234,9 +240,19 @@ export function UserTable({ users, groups }: UserTableProps) {
                   <TableCell className="font-medium">{user.email}</TableCell>
                   <TableCell>
                     <Badge
-                      variant={user.role === 'admin' ? 'default' : 'secondary'}
+                      variant={
+                        user.role === 'admin'
+                          ? 'default'
+                          : user.role === 'editor'
+                          ? 'secondary'
+                          : 'outline'
+                      }
                     >
-                      {user.role === 'admin' ? 'Admin' : 'Użytkownik'}
+                      {user.role === 'admin'
+                        ? 'Admin'
+                        : user.role === 'editor'
+                        ? 'Edytor'
+                        : 'Użytkownik'}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
@@ -337,6 +353,41 @@ export function UserTable({ users, groups }: UserTableProps) {
                 </span>
               </p>
               <div className="space-y-2">
+                <Label>Rola</Label>
+                <div className="flex flex-wrap gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="editing-role"
+                      checked={editingRole === 'user'}
+                      onChange={() => setEditingRole('user')}
+                      className="h-4 w-4 border-input"
+                    />
+                    <span className="text-sm">Użytkownik</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="editing-role"
+                      checked={editingRole === 'editor'}
+                      onChange={() => setEditingRole('editor')}
+                      className="h-4 w-4 border-input"
+                    />
+                    <span className="text-sm">Edytor</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="editing-role"
+                      checked={editingRole === 'admin'}
+                      onChange={() => setEditingRole('admin')}
+                      className="h-4 w-4 border-input"
+                    />
+                    <span className="text-sm">Administrator</span>
+                  </label>
+                </div>
+              </div>
+              <div className="space-y-2">
                 <Label>Grupy</Label>
                 <div className="border rounded-md p-3 max-h-[240px] overflow-y-auto space-y-2">
                   {groups.length === 0 ? (
@@ -417,7 +468,9 @@ export function UserTable({ users, groups }: UserTableProps) {
               <Label>Rola</Label>
               <Select
                 value={newUserRole}
-                onValueChange={(v) => setNewUserRole(v as 'user' | 'admin')}
+                onValueChange={(v) =>
+                  setNewUserRole(v as 'user' | 'admin' | 'editor')
+                }
                 disabled={creating}
               >
                 <SelectTrigger>
@@ -425,6 +478,7 @@ export function UserTable({ users, groups }: UserTableProps) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="user">Użytkownik</SelectItem>
+                  <SelectItem value="editor">Edytor</SelectItem>
                   <SelectItem value="admin">Administrator</SelectItem>
                 </SelectContent>
               </Select>

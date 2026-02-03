@@ -13,7 +13,15 @@
       "isActive": true,
       "createdAt": "2026-02-02T14:34:39.543Z",
       "notes": ""
+    },
+    {
+      "id": "wl-02c89883",
+      "pattern": "michal@kleniewski.com",
+      "isActive": true,
+      "createdAt": "2026-02-03T18:03:32.773Z",
+      "notes": "Zatwierdzony z poczekalni"
     }
   ],
-  "blacklist": []
+  "blacklist": [],
+  "pending": []
 }

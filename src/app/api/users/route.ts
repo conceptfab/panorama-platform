@@ -6,7 +6,7 @@ import { z } from 'zod';
 
 const createUserSchema = z.object({
   email: z.string().email('Nieprawidłowy adres email'),
-  role: z.enum(['admin', 'user']).optional().default('user'),
+  role: z.enum(['admin', 'user', 'editor']).optional().default('user'),
   groupIds: z.array(z.string()).optional().default([]),
   addToWhitelist: z.boolean().optional().default(true),
 });
@@ -47,7 +47,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { email, role, groupIds, addToWhitelist: shouldAddToWhitelist } = parsed.data;
+    const {
+      email,
+      role,
+      groupIds,
+      addToWhitelist: shouldAddToWhitelist,
+    } = parsed.data;
     const normalizedEmail = email.toLowerCase().trim();
 
     // Sprawdź czy użytkownik już istnieje
