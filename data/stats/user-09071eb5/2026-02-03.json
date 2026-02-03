@@ -1,0 +1,46 @@
+{
+  "date": "2026-02-03",
+  "userId": "user-09071eb5",
+  "events": [
+    {
+      "type": "login",
+      "at": "2026-02-03T18:49:46.453Z",
+      "system": {
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Edg/144.0.0.0",
+        "language": "pl",
+        "languages": [
+          "pl",
+          "en-US",
+          "en"
+        ],
+        "platform": "Win32",
+        "screenWidth": 1920,
+        "screenHeight": 1200,
+        "windowWidth": 1912,
+        "windowHeight": 1076,
+        "devicePixelRatio": 1.5,
+        "timezone": "Europe/Warsaw"
+      }
+    },
+    {
+      "type": "login",
+      "at": "2026-02-03T18:49:46.557Z",
+      "system": {
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Edg/144.0.0.0",
+        "language": "pl",
+        "languages": [
+          "pl",
+          "en-US",
+          "en"
+        ],
+        "platform": "Win32",
+        "screenWidth": 1920,
+        "screenHeight": 1200,
+        "windowWidth": 1912,
+        "windowHeight": 1076,
+        "devicePixelRatio": 1.5,
+        "timezone": "Europe/Warsaw"
+      }
+    }
+  ]
+}

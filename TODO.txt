@@ -1,13 +1,4 @@
--w widoku admina musi być podział w galerii na grupy, kaflu projektu musi być informacja o kolorze grupy. w widku małym i srednim tylko kolorowy pasek nad miniaturką. w widku duzym kolorowy pasek i nazwa grupy pod liczbą panoram
-
-
 - operacje na plikach w menadzerze
-
-- pliki do zawsze webP
-- system zapisywania danych / statystyk uzytkowników JSON - pliki 24H
-- poprawki UI - ikonki 
-- 3 rodzaje wielkosci ikon projektów, w najwieszkym rozmiarze ikony edycji
-- trwałosc ciastka???
-- podział na grupy w galerii projektów
+- pliki doto zawsze webP
 
 Przeanalizuj dokładnie kod pod kątem optymalizacji, martwego kodu, over-engineeringu, bezpieczeństwa. Przygotuj szczegółowy raport poprawki.md

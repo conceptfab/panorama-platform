@@ -72,7 +72,11 @@ export default async function AdminProjectsPage() {
           </Link>
         </div>
       ) : (
-        <AdminProjectGrid projects={resolvedProjects} groups={groups} />
+        <AdminProjectGrid
+          projects={resolvedProjects}
+          groups={groups}
+          hideGroups={session.role === 'editor'}
+        />
       )}
 
       {session.role === 'admin' && <FileManager projects={projectsWithSize} />}

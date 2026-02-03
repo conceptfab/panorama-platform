@@ -107,6 +107,29 @@
       "at": "2026-02-03T17:56:00.209Z",
       "projectId": "Jutrzenki",
       "durationSeconds": 9
+    },
+    {
+      "type": "login",
+      "at": "2026-02-03T18:48:53.729Z",
+      "system": {
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
+        "language": "pl",
+        "languages": [
+          "pl",
+          "en",
+          "en-GB",
+          "en-US",
+          "de-CH",
+          "de"
+        ],
+        "platform": "Win32",
+        "screenWidth": 1920,
+        "screenHeight": 1200,
+        "windowWidth": 1879,
+        "windowHeight": 1025,
+        "devicePixelRatio": 1.5,
+        "timezone": "Europe/Warsaw"
+      }
     }
   ]
 }

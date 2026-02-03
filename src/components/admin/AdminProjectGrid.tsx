@@ -12,6 +12,8 @@ export type GridSize = 'large' | 'medium' | 'small';
 interface AdminProjectGridProps {
   projects: Project[];
   groups: Group[];
+  /** Ukryj grupy (np. widok edytora w Galerii) – płaska lista, bez sekcji i pasków na kartach */
+  hideGroups?: boolean;
 }
 
 const GRID_SIZE_KEY = 'admin-projects-grid-size';
@@ -37,7 +39,11 @@ const gridConfig: Record<
   },
 };
 
-export function AdminProjectGrid({ projects, groups }: AdminProjectGridProps) {
+export function AdminProjectGrid({
+  projects,
+  groups,
+  hideGroups = false,
+}: AdminProjectGridProps) {
   const [gridSize, setGridSize] = useState<GridSize>('large');
   const [mounted, setMounted] = useState(false);
 
@@ -48,6 +54,9 @@ export function AdminProjectGrid({ projects, groups }: AdminProjectGridProps) {
   }, [groups]);
 
   const sections = useMemo(() => {
+    if (hideGroups) {
+      return [{ group: null as Group | null, projects }];
+    }
     const result: { group: Group | null; projects: Project[] }[] = [];
     const assignedIds = new Set<string>();
 
@@ -66,7 +75,7 @@ export function AdminProjectGrid({ projects, groups }: AdminProjectGridProps) {
       result.push({ group: null, projects: ungrouped });
     }
     return result;
-  }, [projects, groups]);
+  }, [projects, groups, hideGroups]);
 
   useEffect(() => {
     const saved = localStorage.getItem(GRID_SIZE_KEY) as GridSize | null;
@@ -85,10 +94,12 @@ export function AdminProjectGrid({ projects, groups }: AdminProjectGridProps) {
   };
 
   const getProjectGroups = (project: Project) =>
-    (project.groupIds ?? [])
-      .map((id) => groupMap.get(id))
-      .filter((g): g is Group => g != null)
-      .map((g) => ({ name: g.name, color: g.color }));
+    hideGroups
+      ? []
+      : (project.groupIds ?? [])
+          .map((id) => groupMap.get(id))
+          .filter((g): g is Group => g != null)
+          .map((g) => ({ name: g.name, color: g.color }));
 
   if (!mounted) {
     return (
@@ -136,7 +147,7 @@ export function AdminProjectGrid({ projects, groups }: AdminProjectGridProps) {
       <div className="space-y-8">
         {sections.map(({ group, projects: sectionProjects }) => (
           <section key={group?.id ?? 'bez-grupy'}>
-            {group && (
+            {!hideGroups && group && (
               <h2
                 className="text-lg font-semibold mb-3 flex items-center gap-2"
                 style={group.color ? { color: group.color } : undefined}
@@ -149,7 +160,7 @@ export function AdminProjectGrid({ projects, groups }: AdminProjectGridProps) {
                 {group.name}
               </h2>
             )}
-            {!group && sectionProjects.length > 0 && (
+            {!hideGroups && !group && sectionProjects.length > 0 && (
               <h2 className="text-lg font-semibold text-muted-foreground mb-3">
                 Bez grupy
               </h2>

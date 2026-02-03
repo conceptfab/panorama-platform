@@ -8,8 +8,11 @@ export default async function Home() {
     redirect('/login');
   }
 
-  if (session.role === 'admin' || session.role === 'editor') {
+  if (session.role === 'admin') {
     redirect('/admin/projects');
+  }
+  if (session.role === 'editor') {
+    redirect('/gallery');
   }
 
   redirect('/gallery');

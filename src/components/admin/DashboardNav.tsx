@@ -46,10 +46,7 @@ export function DashboardNav({ userRole, userEmail }: DashboardNavProps) {
         { href: '/admin/stats', label: 'Statystyki', icon: BarChart3 },
       ]
     : isEditor
-    ? [
-        { href: '/gallery', label: 'Galeria', icon: LayoutGrid },
-        { href: '/admin/projects', label: 'Projekty', icon: FolderOpen },
-      ]
+    ? [{ href: '/gallery', label: 'Galeria', icon: LayoutGrid }]
     : [{ href: '/gallery', label: 'Galeria', icon: LayoutGrid }];
 
   const handleLogout = async () => {
