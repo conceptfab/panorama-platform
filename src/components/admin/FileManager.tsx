@@ -13,6 +13,8 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Archive,
   Upload,
@@ -36,6 +38,8 @@ export function FileManager({ projects }: FileManagerProps) {
   const router = useRouter();
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [importName, setImportName] = useState('');
+  const [importDescription, setImportDescription] = useState('');
   const [uploading, setUploading] = useState(false);
 
   // Stats
@@ -57,6 +61,9 @@ export function FileManager({ projects }: FileManagerProps) {
     try {
       const formData = new FormData();
       formData.append('file', uploadFile);
+      if (importName.trim()) formData.append('name', importName.trim());
+      if (importDescription.trim())
+        formData.append('description', importDescription.trim());
       const res = await fetch('/api/files/upload-project', {
         method: 'POST',
         body: formData,
@@ -70,6 +77,8 @@ export function FileManager({ projects }: FileManagerProps) {
       );
       setUploadDialogOpen(false);
       setUploadFile(null);
+      setImportName('');
+      setImportDescription('');
       router.refresh();
     } catch (e) {
       toast.error(
@@ -204,6 +213,8 @@ export function FileManager({ projects }: FileManagerProps) {
           if (!open) {
             setUploadDialogOpen(false);
             setUploadFile(null);
+            setImportName('');
+            setImportDescription('');
           }
         }}
       >
@@ -226,6 +237,30 @@ export function FileManager({ projects }: FileManagerProps) {
               accept=".zip"
               className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-secondary file:text-secondary-foreground"
               onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="import-name">Nazwa projektu (opcjonalnie)</Label>
+            <Input
+              id="import-name"
+              placeholder="Z ZIP lub wpisz nową"
+              value={importName}
+              onChange={(e) => setImportName(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Ustalona przy imporcie; wpisana tutaj nadpisze nazwę z
+              config.json.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="import-desc">Opis (opcjonalnie)</Label>
+            <Textarea
+              id="import-desc"
+              placeholder="Z ZIP lub wpisz nowy"
+              value={importDescription}
+              onChange={(e) => setImportDescription(e.target.value)}
+              rows={2}
+              className="resize-none"
             />
           </div>
           <DialogFooter>

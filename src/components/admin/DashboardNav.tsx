@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
@@ -20,7 +21,9 @@ import {
   FileText,
   LogOut,
   Menu,
+  Bug,
 } from 'lucide-react';
+import { BugHunterDialog } from '@/components/auth/BugHunterDialog';
 
 interface DashboardNavProps {
   userRole: 'admin' | 'user';
@@ -30,6 +33,7 @@ interface DashboardNavProps {
 export function DashboardNav({ userRole, userEmail }: DashboardNavProps) {
   const pathname = usePathname();
   const { logout } = useAuth();
+  const [bugHunterOpen, setBugHunterOpen] = useState(false);
 
   const isAdmin = userRole === 'admin';
 
@@ -85,6 +89,22 @@ export function DashboardNav({ userRole, userEmail }: DashboardNavProps) {
           </div>
 
           <div className="flex items-center gap-4">
+            {!isAdmin && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setBugHunterOpen(true)}
+                  title="Bug hunter – zgłoś błąd"
+                >
+                  <Bug className="h-5 w-5" />
+                </Button>
+                <BugHunterDialog
+                  open={bugHunterOpen}
+                  onOpenChange={setBugHunterOpen}
+                />
+              </>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="md:hidden">

@@ -8,6 +8,42 @@ import { createProject, updateProjectConfig } from '@/lib/db/projects';
 import { getDataRoot } from '@/lib/data-root';
 import { projectConfigSchema } from '@/utils/validation';
 import { ensureDir } from '@/lib/db/json-store';
+import type { ProjectConfig } from '@/types';
+
+/**
+ * W configu po imporcie: ustawia nową nazwę/opis i zamienia ścieżki projektu na nowy katalog.
+ */
+function configForImportedProject(
+  config: ProjectConfig,
+  newProjectId: string,
+  newProjectName: string,
+  newDescription: string
+): ProjectConfig {
+  const pathRegex = /(\/?)uploads\/projects\/[^/"\s]+/g;
+  const replacePath = (s: string) =>
+    s.replace(
+      pathRegex,
+      (_, leading) => (leading || '') + 'uploads/projects/' + newProjectId
+    );
+
+  function replaceStrings(obj: unknown): unknown {
+    if (typeof obj === 'string') return replacePath(obj);
+    if (Array.isArray(obj)) return obj.map(replaceStrings);
+    if (obj !== null && typeof obj === 'object') {
+      const out: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(obj)) out[k] = replaceStrings(v);
+      return out;
+    }
+    return obj;
+  }
+
+  const withPaths = replaceStrings(config) as ProjectConfig;
+  return {
+    ...withPaths,
+    projectName: newProjectName,
+    description: newDescription,
+  };
+}
 
 export async function POST(request: NextRequest) {
   let tempDir: string | null = null;
@@ -77,9 +113,15 @@ export async function POST(request: NextRequest) {
     const projectConfig = validated.data;
     const createdBy = session?.userId ?? 'user-001';
 
+    const importName = (formData.get('name') as string | null)?.trim();
+    const projectName = importName || projectConfig.projectName;
+    const projectDescription =
+      (formData.get('description') as string | null)?.trim() ??
+      projectConfig.description;
+
     const project = await createProject(
-      projectConfig.projectName,
-      projectConfig.description,
+      projectName,
+      projectDescription,
       createdBy,
       []
     );
@@ -90,9 +132,6 @@ export async function POST(request: NextRequest) {
     const thumbnailsSrc = path.join(tempDir, 'thumbnails');
     const panoramasDst = path.join(projectDir, 'panoramas');
     const thumbnailsDst = path.join(projectDir, 'thumbnails');
-
-    const destConfigPath = path.join(projectDir, 'config.json');
-    await fs.copyFile(configPath, destConfigPath);
 
     if (await exists(panoramasSrc)) {
       await ensureDir(panoramasDst);
@@ -118,7 +157,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    await updateProjectConfig(project.id, projectConfig);
+    const updatedConfig = configForImportedProject(
+      projectConfig,
+      project.id,
+      project.name,
+      project.description
+    );
+    await updateProjectConfig(project.id, updatedConfig);
 
     await fs.rm(tempDir, { recursive: true, force: true }).catch(() => {});
 
