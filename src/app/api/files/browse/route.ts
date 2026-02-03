@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { promises as fs } from 'fs';
+import { promises as fs, Stats } from 'fs';
 import path from 'path';
 import { requireAdmin } from '@/lib/auth/session';
 import { getDataRoot } from '@/lib/data-root';
+import { validateAndResolvePath } from '@/lib/file-utils';
 
 export type BrowseEntry = {
   name: string;
@@ -18,56 +19,49 @@ export async function GET(request: NextRequest) {
     const root = getDataRoot();
     const searchParams = request.nextUrl.searchParams;
     const rel = searchParams.get('path') ?? '';
-    const decoded = decodeURIComponent(rel).replace(/\\/g, '/');
-    const normalized = path.normalize(decoded).replace(/^\//, '');
-    const dirPath = path.join(root, normalized);
 
-    const relativeResolved = path.relative(
-      root,
-      path.resolve(root, normalized)
-    );
-    if (
-      relativeResolved.startsWith('..') ||
-      path.isAbsolute(relativeResolved)
-    ) {
-      return NextResponse.json({ error: 'Invalid path' }, { status: 400 });
+    const { valid, resolvedPath, error } = validateAndResolvePath(root, rel);
+    if (!valid) {
+      return NextResponse.json({ error }, { status: 400 });
     }
 
-    const stat = await fs.stat(dirPath).catch(() => null);
+    const stat = await fs.stat(resolvedPath).catch(() => null);
     if (!stat || !stat.isDirectory()) {
       return NextResponse.json({ error: 'Not a directory' }, { status: 400 });
     }
 
-    const names = await fs.readdir(dirPath);
-    const entries: BrowseEntry[] = [];
+    const names = await fs.readdir(resolvedPath);
 
-    for (const name of names) {
-      const fullPath = path.join(dirPath, name);
-      try {
-        const s = await fs.stat(fullPath);
-        if (s.isDirectory()) {
-          entries.push({
-            name,
-            type: 'dir',
-            mtime: s.mtime.toISOString(),
-          });
-        } else {
-          entries.push({
-            name,
-            type: 'file',
-            size: s.size,
-            mtime: s.mtime.toISOString(),
-          });
+    // ZOPTYMALIZOWANE: równoległe wywołania fs.stat
+    const statsResults = await Promise.all(
+      names.map(async (name): Promise<{ name: string; stat: Stats } | null> => {
+        const fullPath = path.join(resolvedPath, name);
+        try {
+          const s = await fs.stat(fullPath);
+          return { name, stat: s };
+        } catch {
+          return null;
         }
-      } catch {
-        // skip inaccessible
-      }
-    }
+      })
+    );
+
+    const entries: BrowseEntry[] = statsResults
+      .filter((s): s is { name: string; stat: Stats } => s !== null)
+      .map(({ name, stat: s }) => ({
+        name,
+        type: s.isDirectory() ? 'dir' : 'file',
+        size: s.isDirectory() ? undefined : s.size,
+        mtime: s.mtime.toISOString(),
+      }));
 
     entries.sort((a, b) => {
       if (a.type !== b.type) return a.type === 'dir' ? -1 : 1;
       return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
     });
+
+    // Oblicz znormalizowaną ścieżkę do wyświetlenia
+    const decoded = decodeURIComponent(rel).replace(/\\/g, '/');
+    const normalized = path.normalize(decoded).replace(/^\//, '');
 
     return NextResponse.json({
       path: normalized || '.',

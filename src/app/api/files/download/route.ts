@@ -3,6 +3,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { requireAdmin } from '@/lib/auth/session';
 import { getDataRoot } from '@/lib/data-root';
+import { validateAndResolvePath } from '@/lib/file-utils';
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,28 +11,19 @@ export async function GET(request: NextRequest) {
 
     const root = getDataRoot();
     const rel = request.nextUrl.searchParams.get('path') ?? '';
-    const decoded = decodeURIComponent(rel).replace(/\\/g, '/');
-    const normalized = path.normalize(decoded).replace(/^\//, '');
-    const filePath = path.join(root, normalized);
 
-    const relativeResolved = path.relative(
-      root,
-      path.resolve(root, normalized)
-    );
-    if (
-      relativeResolved.startsWith('..') ||
-      path.isAbsolute(relativeResolved)
-    ) {
-      return NextResponse.json({ error: 'Invalid path' }, { status: 400 });
+    const { valid, resolvedPath, error } = validateAndResolvePath(root, rel);
+    if (!valid) {
+      return NextResponse.json({ error }, { status: 400 });
     }
 
-    const stat = await fs.stat(filePath).catch(() => null);
+    const stat = await fs.stat(resolvedPath).catch(() => null);
     if (!stat || !stat.isFile()) {
       return NextResponse.json({ error: 'File not found' }, { status: 404 });
     }
 
-    const name = path.basename(filePath);
-    const buffer = await fs.readFile(filePath);
+    const name = path.basename(resolvedPath);
+    const buffer = await fs.readFile(resolvedPath);
 
     return new NextResponse(buffer, {
       headers: {

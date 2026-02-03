@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { getDataRoot } from '@/lib/data-root';
+import { getSession } from '@/lib/auth/session';
 
 const UPLOADS_DIR = path.join(getDataRoot(), 'uploads');
 
@@ -19,12 +20,22 @@ interface RouteParams {
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
+    // Autoryzacja - tylko zalogowani użytkownicy
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { path: pathSegments } = await params;
     const filePath = path.join(UPLOADS_DIR, ...pathSegments);
 
-    // Security: ensure path doesn't escape uploads directory
-    const normalizedPath = path.normalize(filePath);
-    if (!normalizedPath.startsWith(UPLOADS_DIR)) {
+    // Poprawiona walidacja path traversal
+    const resolvedPath = path.resolve(filePath);
+    const resolvedUploads = path.resolve(UPLOADS_DIR);
+    if (
+      !resolvedPath.startsWith(resolvedUploads + path.sep) &&
+      resolvedPath !== resolvedUploads
+    ) {
       return NextResponse.json({ error: 'Invalid path' }, { status: 400 });
     }
 

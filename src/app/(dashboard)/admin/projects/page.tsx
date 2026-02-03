@@ -5,8 +5,9 @@ import {
   getProjectsWithExistingFolders,
   getProjectSize,
 } from '@/lib/db/projects';
+import { getGroups } from '@/lib/db/groups';
 import { Button } from '@/components/ui/button';
-import { ProjectCard } from '@/components/admin/ProjectCard';
+import { AdminProjectGrid } from '@/components/admin/AdminProjectGrid';
 import { FileManager } from '@/components/admin/FileManager';
 import { Project } from '@/types';
 import { Plus } from 'lucide-react';
@@ -17,7 +18,10 @@ export default async function AdminProjectsPage() {
     redirect('/');
   }
 
-  const projects = await getProjectsWithExistingFolders();
+  const [projects, groups] = await Promise.all([
+    getProjectsWithExistingFolders(),
+    getGroups(),
+  ]);
   const projectsWithSize: (Project & { size?: number })[] = await Promise.all(
     projects.map(async (p) => ({
       ...p,
@@ -53,11 +57,7 @@ export default async function AdminProjectsPage() {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {projects.map((project) => (
-            <ProjectCard key={project.id} project={project} />
-          ))}
-        </div>
+        <AdminProjectGrid projects={projects} groups={groups} />
       )}
 
       {/* Statystyki i operacje na danych – na dole strony Projekty */}

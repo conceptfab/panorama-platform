@@ -6,7 +6,9 @@
       "description": "Pełny dostęp do wszystkich projektów",
       "color": "#20b2aa",
       "createdAt": "2026-01-01T00:00:00Z",
-      "projectIds": []
+      "projectIds": [
+        "jutrzenki"
+      ]
     },
     {
       "id": "group-f3efd3df",
@@ -15,7 +17,8 @@
       "color": "#0055ff",
       "createdAt": "2026-02-02T14:35:34.044Z",
       "projectIds": [
-        "proj-75c6a0e3"
+        "proj-75c6a0e3",
+        "jutrzenki"
       ]
     }
   ]

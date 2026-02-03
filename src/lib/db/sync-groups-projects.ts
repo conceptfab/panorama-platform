@@ -1,66 +1,94 @@
-import { getGroups, updateGroup } from './groups';
-import { getProjects, updateProject } from './projects';
+import { readJsonFileWithDefault, writeJsonFile } from './json-store';
+import { GroupsData, ProjectsData } from '@/types';
+
+const GROUPS_FILE = 'groups.json';
+const PROJECTS_FILE = 'projects.json';
 
 /**
  * Po zmianie project.groupIds – przelicza group.projectIds dla wszystkich grup
  * (źródło prawdy: project.groupIds).
+ * ZOPTYMALIZOWANE: jeden zapis zamiast N zapisów
  */
 export async function syncGroupsProjectIdsFromProjects(): Promise<void> {
-  const [projects, groups] = await Promise.all([getProjects(), getGroups()]);
+  const [projectsData, groupsData] = await Promise.all([
+    readJsonFileWithDefault<ProjectsData>(PROJECTS_FILE, { projects: [] }),
+    readJsonFileWithDefault<GroupsData>(GROUPS_FILE, { groups: [] }),
+  ]);
 
+  const projects = projectsData.projects;
+  const groups = groupsData.groups;
+
+  // Modyfikuj w pamięci
   for (const group of groups) {
-    const projectIds = projects
+    group.projectIds = projects
       .filter((p) => p.groupIds.includes(group.id))
       .map((p) => p.id);
-    await updateGroup(group.id, { projectIds });
   }
+
+  // Jeden zapis
+  await writeJsonFile<GroupsData>(GROUPS_FILE, { groups });
 }
 
 /**
  * Po zmianie group.projectIds – aktualizuje groupIds we wszystkich projektach,
  * tak aby były zgrane z listą projektów grupy.
+ * ZOPTYMALIZOWANE: jeden zapis zamiast N zapisów
  */
 export async function syncGroupProjectIdsToProjects(
   groupId: string,
   projectIds: string[]
 ): Promise<void> {
-  const projects = await getProjects();
+  const projectsData = await readJsonFileWithDefault<ProjectsData>(
+    PROJECTS_FILE,
+    { projects: [] }
+  );
+
+  const projects = projectsData.projects;
+  let modified = false;
 
   for (const project of projects) {
     const hasGroup = project.groupIds.includes(groupId);
     const shouldHaveGroup = projectIds.includes(project.id);
 
     if (hasGroup && !shouldHaveGroup) {
-      await updateProject(
-        project.id,
-        { groupIds: project.groupIds.filter((id) => id !== groupId) },
-        { skipGroupSync: true }
-      );
+      project.groupIds = project.groupIds.filter((id) => id !== groupId);
+      modified = true;
     } else if (!hasGroup && shouldHaveGroup) {
-      await updateProject(
-        project.id,
-        { groupIds: [...project.groupIds, groupId] },
-        { skipGroupSync: true }
-      );
+      project.groupIds.push(groupId);
+      modified = true;
     }
+  }
+
+  // Jeden zapis tylko jeśli coś się zmieniło
+  if (modified) {
+    await writeJsonFile<ProjectsData>(PROJECTS_FILE, { projects });
   }
 }
 
 /**
  * Po usunięciu grupy – usuwa groupId z groupIds we wszystkich projektach.
+ * ZOPTYMALIZOWANE: jeden zapis zamiast N zapisów
  */
 export async function removeGroupFromAllProjects(
   groupId: string
 ): Promise<void> {
-  const projects = await getProjects();
+  const projectsData = await readJsonFileWithDefault<ProjectsData>(
+    PROJECTS_FILE,
+    { projects: [] }
+  );
+
+  const projects = projectsData.projects;
+  let modified = false;
 
   for (const project of projects) {
     if (project.groupIds.includes(groupId)) {
-      await updateProject(
-        project.id,
-        { groupIds: project.groupIds.filter((id) => id !== groupId) },
-        { skipGroupSync: true }
-      );
+      project.groupIds = project.groupIds.filter((id) => id !== groupId);
+      modified = true;
     }
+  }
+
+  // Jeden zapis tylko jeśli coś się zmieniło
+  if (modified) {
+    await writeJsonFile<ProjectsData>(PROJECTS_FILE, { projects });
   }
 }

@@ -228,38 +228,34 @@ export async function updateProjectConfig(
 /**
  * Zwraca rozmiar katalogu projektu na dysku (w bajtach).
  * Zwraca 0, jeśli katalog nie istnieje lub wystąpi błąd.
+ * ZOPTYMALIZOWANE: równoległe wywołania fs.stat
  */
 export async function getProjectSize(id: string): Promise<number> {
   const projectDir = path.join(UPLOADS_DIR, id);
   try {
-    const entries = await fs.readdir(projectDir, { withFileTypes: true });
-    let total = 0;
-    for (const entry of entries) {
-      const fullPath = path.join(projectDir, entry.name);
-      if (entry.isDirectory()) {
-        total += await getDirSize(fullPath);
-      } else {
-        const stat = await fs.stat(fullPath);
-        total += stat.size;
-      }
-    }
-    return total;
+    return await getDirSizeParallel(projectDir);
   } catch {
     return 0;
   }
 }
 
-async function getDirSize(dirPath: string): Promise<number> {
+async function getDirSizeParallel(dirPath: string): Promise<number> {
   const entries = await fs.readdir(dirPath, { withFileTypes: true });
-  let total = 0;
-  for (const entry of entries) {
-    const fullPath = path.join(dirPath, entry.name);
-    if (entry.isDirectory()) {
-      total += await getDirSize(fullPath);
-    } else {
-      const stat = await fs.stat(fullPath);
-      total += stat.size;
-    }
-  }
-  return total;
+
+  const sizes = await Promise.all(
+    entries.map(async (entry) => {
+      const fullPath = path.join(dirPath, entry.name);
+      try {
+        if (entry.isDirectory()) {
+          return await getDirSizeParallel(fullPath);
+        }
+        const stat = await fs.stat(fullPath);
+        return stat.size;
+      } catch {
+        return 0;
+      }
+    })
+  );
+
+  return sizes.reduce((a, b) => a + b, 0);
 }

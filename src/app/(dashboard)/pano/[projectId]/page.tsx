@@ -15,15 +15,19 @@ export default async function PanoPage({ params }: PageProps) {
   }
 
   const { projectId } = await params;
-  const project = await getProjectById(projectId);
+
+  // ZOPTYMALIZOWANE: równoległe pobieranie projektu i użytkownika
+  const [project, user] = await Promise.all([
+    getProjectById(projectId),
+    session.role !== 'admin' ? getUserById(session.userId) : Promise.resolve(null),
+  ]);
 
   if (!project) {
     notFound();
   }
 
-  // Check access
+  // Sprawdź dostęp PRZED pobraniem konfiguracji
   if (session.role !== 'admin') {
-    const user = await getUserById(session.userId);
     if (!user) notFound();
 
     const hasAccess =
@@ -35,6 +39,7 @@ export default async function PanoPage({ params }: PageProps) {
     }
   }
 
+  // Pobierz config tylko po weryfikacji dostępu
   const config = await getProjectConfig(projectId);
   if (!config || config.panoramas.length === 0) {
     return (

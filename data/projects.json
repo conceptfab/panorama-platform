@@ -9,11 +9,22 @@
       "createdAt": "2026-02-02T14:35:54.376Z",
       "updatedAt": "2026-02-02T20:48:59.381Z",
       "createdBy": "user-001",
-      "groupIds": [
-        "group-f3efd3df"
-      ],
+      "groupIds": ["group-f3efd3df"],
       "isPublished": true,
       "panoramaCount": 3
+    },
+    {
+      "id": "Jutrzenki",
+      "name": "Jutrzenki",
+      "description": "",
+      "thumbnailUrl": "/uploads/projects/Jutrzenki/thumbnails/thumb.webp",
+      "configPath": "/uploads/projects/Jutrzenki/config.json",
+      "createdAt": "2026-02-03T13:30:02.497Z",
+      "updatedAt": "2026-02-03T13:32:12.826Z",
+      "createdBy": "user-001",
+      "groupIds": ["group-f3efd3df", "group-001"],
+      "isPublished": true,
+      "panoramaCount": 0
     }
   ]
 }

@@ -3,24 +3,11 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { requireAdmin } from '@/lib/auth/session';
 import { getDataRoot } from '@/lib/data-root';
-
-const TEXT_EXT = new Set([
-  'json',
-  'txt',
-  'md',
-  'html',
-  'css',
-  'js',
-  'ts',
-  'tsx',
-  'jsx',
-  'xml',
-  'yaml',
-  'yml',
-  'env',
-  'log',
-  'csv',
-]);
+import {
+  validateAndResolvePath,
+  isEditableExtension,
+  MAX_TEXT_FILE_SIZE,
+} from '@/lib/file-utils';
 
 export async function PUT(request: NextRequest) {
   try {
@@ -28,23 +15,13 @@ export async function PUT(request: NextRequest) {
 
     const root = getDataRoot();
     const rel = request.nextUrl.searchParams.get('path') ?? '';
-    const decoded = decodeURIComponent(rel).replace(/\\/g, '/');
-    const normalized = path.normalize(decoded).replace(/^\//, '');
-    const filePath = path.join(root, normalized);
 
-    const relativeResolved = path.relative(
-      root,
-      path.resolve(root, normalized)
-    );
-    if (
-      relativeResolved.startsWith('..') ||
-      path.isAbsolute(relativeResolved)
-    ) {
-      return NextResponse.json({ error: 'Invalid path' }, { status: 400 });
+    const { valid, resolvedPath, error } = validateAndResolvePath(root, rel);
+    if (!valid) {
+      return NextResponse.json({ error }, { status: 400 });
     }
 
-    const ext = path.extname(filePath).slice(1).toLowerCase();
-    if (!TEXT_EXT.has(ext)) {
+    if (!isEditableExtension(resolvedPath)) {
       return NextResponse.json(
         { error: 'Only text/JSON files can be edited' },
         { status: 400 }
@@ -52,8 +29,17 @@ export async function PUT(request: NextRequest) {
     }
 
     const content = await request.text();
-    await fs.mkdir(path.dirname(filePath), { recursive: true });
-    await fs.writeFile(filePath, content, 'utf-8');
+
+    // Walidacja rozmiaru pliku
+    if (Buffer.byteLength(content, 'utf-8') > MAX_TEXT_FILE_SIZE) {
+      return NextResponse.json(
+        { error: 'File too large (max 10MB)' },
+        { status: 413 }
+      );
+    }
+
+    await fs.mkdir(path.dirname(resolvedPath), { recursive: true });
+    await fs.writeFile(resolvedPath, content, 'utf-8');
 
     return NextResponse.json({ ok: true });
   } catch (error) {

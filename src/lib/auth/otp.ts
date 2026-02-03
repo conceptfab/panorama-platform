@@ -1,6 +1,7 @@
 // OTP store w pliku (data/otp-store.json) – działa po restarcie i przy wielu instancjach
 // Kody wygasają po 10 minutach
 
+import { randomInt } from 'crypto';
 import { readJsonFileWithDefault, writeJsonFile } from '@/lib/db/json-store';
 
 interface OTPEntry {
@@ -29,7 +30,7 @@ async function readStore(): Promise<OtpStore> {
 }
 
 export function generateOTP(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  return randomInt(100000, 1000000).toString();
 }
 
 export async function storeOTP(email: string, code: string): Promise<void> {

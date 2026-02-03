@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import {
   Dialog,
   DialogContent,
@@ -21,7 +22,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Pencil, Trash2 } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Pencil, Trash2, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -38,6 +46,14 @@ export function UserTable({ users, groups }: UserTableProps) {
   const [deleting, setDeleting] = useState(false);
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+
+  // Stan dla dialogu dodawania użytkownika
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [newUserEmail, setNewUserEmail] = useState('');
+  const [newUserRole, setNewUserRole] = useState<'user' | 'admin'>('user');
+  const [newUserGroupIds, setNewUserGroupIds] = useState<string[]>([]);
+  const [addToWhitelist, setAddToWhitelist] = useState(true);
+  const [creating, setCreating] = useState(false);
 
   const getGroupNames = (groupIds: string[]) => {
     return groupIds
@@ -59,6 +75,14 @@ export function UserTable({ users, groups }: UserTableProps) {
 
   const toggleGroup = (groupId: string) => {
     setSelectedGroupIds((prev) =>
+      prev.includes(groupId)
+        ? prev.filter((id) => id !== groupId)
+        : [...prev, groupId]
+    );
+  };
+
+  const toggleNewUserGroup = (groupId: string) => {
+    setNewUserGroupIds((prev) =>
       prev.includes(groupId)
         ? prev.filter((id) => id !== groupId)
         : [...prev, groupId]
@@ -109,16 +133,88 @@ export function UserTable({ users, groups }: UserTableProps) {
     }
   };
 
+  const handleOpenAddDialog = () => {
+    setNewUserEmail('');
+    setNewUserRole('user');
+    setNewUserGroupIds([]);
+    setAddToWhitelist(true);
+    setIsAddDialogOpen(true);
+  };
+
+  const handleCloseAddDialog = () => {
+    setIsAddDialogOpen(false);
+    setNewUserEmail('');
+    setNewUserRole('user');
+    setNewUserGroupIds([]);
+    setAddToWhitelist(true);
+  };
+
+  const handleCreateUser = async () => {
+    if (!newUserEmail.trim()) {
+      toast.error('Podaj adres email');
+      return;
+    }
+
+    // Podstawowa walidacja email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newUserEmail.trim())) {
+      toast.error('Nieprawidłowy adres email');
+      return;
+    }
+
+    setCreating(true);
+    try {
+      const res = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: newUserEmail.trim(),
+          role: newUserRole,
+          groupIds: newUserGroupIds,
+          addToWhitelist,
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        toast.error(data.error || 'Nie udało się utworzyć użytkownika');
+        return;
+      }
+
+      if (data.whitelistAdded) {
+        toast.success('Użytkownik utworzony i dodany do białej listy');
+      } else {
+        toast.success('Użytkownik utworzony');
+      }
+
+      handleCloseAddDialog();
+      router.refresh();
+    } catch {
+      toast.error('Nie udało się utworzyć użytkownika');
+    } finally {
+      setCreating(false);
+    }
+  };
+
   return (
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Lista użytkowników ({users.length})</CardTitle>
-          <p className="text-sm text-muted-foreground mt-1">
-            Aby dodać użytkownika do grupy: kliknij ikonę{' '}
-            <strong>ołówka</strong> przy danym użytkowniku, zaznacz grupy w
-            oknie i kliknij <strong>Zapisz</strong>.
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Lista użytkowników ({users.length})</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Aby dodać użytkownika do grupy: kliknij ikonę{' '}
+                <strong>ołówka</strong> przy danym użytkowniku, zaznacz grupy w
+                oknie i kliknij <strong>Zapisz</strong>.
+              </p>
+            </div>
+            <Button onClick={handleOpenAddDialog} className="gap-2">
+              <UserPlus className="h-4 w-4" />
+              Dodaj użytkownika
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -184,6 +280,7 @@ export function UserTable({ users, groups }: UserTableProps) {
         </CardContent>
       </Card>
 
+      {/* Dialog usuwania użytkownika */}
       <Dialog
         open={!!userToDelete}
         onOpenChange={(open) => !open && setUserToDelete(null)}
@@ -222,6 +319,7 @@ export function UserTable({ users, groups }: UserTableProps) {
         </DialogContent>
       </Dialog>
 
+      {/* Dialog edycji grup użytkownika */}
       <Dialog
         open={isDialogOpen}
         onOpenChange={(open) => !open && handleCloseDialog()}
@@ -288,6 +386,122 @@ export function UserTable({ users, groups }: UserTableProps) {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog dodawania nowego użytkownika */}
+      <Dialog
+        open={isAddDialogOpen}
+        onOpenChange={(open) => !open && handleCloseAddDialog()}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Dodaj nowego użytkownika</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            {/* Email */}
+            <div className="space-y-2">
+              <Label htmlFor="newUserEmail">Adres email *</Label>
+              <Input
+                id="newUserEmail"
+                type="email"
+                placeholder="jan@example.com"
+                value={newUserEmail}
+                onChange={(e) => setNewUserEmail(e.target.value)}
+                disabled={creating}
+              />
+            </div>
+
+            {/* Rola */}
+            <div className="space-y-2">
+              <Label>Rola</Label>
+              <Select
+                value={newUserRole}
+                onValueChange={(v) => setNewUserRole(v as 'user' | 'admin')}
+                disabled={creating}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="user">Użytkownik</SelectItem>
+                  <SelectItem value="admin">Administrator</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Grupy */}
+            <div className="space-y-2">
+              <Label>Grupy (opcjonalnie)</Label>
+              <div className="border rounded-md p-3 max-h-[160px] overflow-y-auto space-y-2">
+                {groups.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Brak grup do wyboru.
+                  </p>
+                ) : (
+                  groups.map((group) => (
+                    <label
+                      key={group.id}
+                      className={cn(
+                        'flex items-center gap-2 cursor-pointer rounded px-2 py-1.5 hover:bg-muted/50',
+                        newUserGroupIds.includes(group.id) && 'bg-muted/50'
+                      )}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={newUserGroupIds.includes(group.id)}
+                        onChange={() => toggleNewUserGroup(group.id)}
+                        disabled={creating}
+                        className="h-4 w-4 rounded border-input"
+                      />
+                      <span
+                        className="inline-block w-3 h-3 rounded-full shrink-0"
+                        style={{ backgroundColor: group.color }}
+                      />
+                      <span className="text-sm">{group.name}</span>
+                    </label>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Dodaj do białej listy */}
+            <div className="flex items-center gap-3 pt-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={addToWhitelist}
+                  onChange={(e) => setAddToWhitelist(e.target.checked)}
+                  disabled={creating}
+                  className="h-4 w-4 rounded border-input"
+                />
+                <span className="text-sm">
+                  Automatycznie dodaj do białej listy
+                </span>
+              </label>
+            </div>
+            <p className="text-xs text-muted-foreground -mt-2">
+              Użytkownik na białej liście może się zalogować do systemu.
+            </p>
+
+            {/* Przyciski */}
+            <div className="flex gap-2 pt-4">
+              <Button
+                onClick={handleCreateUser}
+                disabled={creating || !newUserEmail.trim()}
+                className="flex-1"
+              >
+                {creating ? 'Tworzenie…' : 'Utwórz użytkownika'}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleCloseAddDialog}
+                disabled={creating}
+              >
+                Anuluj
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </>

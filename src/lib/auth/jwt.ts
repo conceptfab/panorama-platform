@@ -1,8 +1,10 @@
 import { SignJWT, jwtVerify, JWTPayload } from 'jose';
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'your-super-secret-jwt-key-min-32-chars-here'
-);
+const jwtSecret = process.env.JWT_SECRET;
+if (!jwtSecret || jwtSecret.length < 32) {
+  throw new Error('JWT_SECRET environment variable must be set (min 32 chars)');
+}
+const JWT_SECRET = new TextEncoder().encode(jwtSecret);
 
 const JWT_EXPIRATION = process.env.JWT_EXPIRATION || '7d';
 
@@ -12,15 +14,11 @@ export interface TokenPayload extends JWTPayload {
   role: 'admin' | 'user';
 }
 
-function parseExpiration(exp: string): string {
-  return exp;
-}
-
 export async function createSessionToken(payload: Omit<TokenPayload, 'iat' | 'exp'>): Promise<string> {
   return new SignJWT({ ...payload })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
-    .setExpirationTime(parseExpiration(JWT_EXPIRATION))
+    .setExpirationTime(JWT_EXPIRATION)
     .sign(JWT_SECRET);
 }
 
