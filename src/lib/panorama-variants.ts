@@ -43,8 +43,19 @@ export function resolvePanoramaVariant(
   }
 
   const targetWidth = targetVariantWidthForViewport(effectiveWidth);
-  const selected =
+  const baselineSelection =
     variants.find((v) => v.width >= targetWidth) ?? variants[variants.length - 1];
+  const baselineIndex = variants.findIndex(
+    (v) =>
+      v.file === baselineSelection.file &&
+      v.width === baselineSelection.width &&
+      v.height === baselineSelection.height
+  );
+  const selected =
+    baselineIndex >= 0
+      ? variants[Math.min(baselineIndex + 1, variants.length - 1)]
+      : baselineSelection;
+
   return {
     file: selected?.file ?? panorama.file,
     width: selected?.width,
