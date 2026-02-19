@@ -28,6 +28,11 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { generateId } from '@/utils/helpers';
+import {
+  getEffectiveViewportWidth,
+  resolvePanoramaVariant,
+  resolvePanoramaVariantFile,
+} from '@/lib/panorama-variants';
 
 interface HotspotEditorProps {
   projectId: string;
@@ -57,6 +62,12 @@ export function HotspotEditor({
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [autoRotate, setAutoRotate] = useState(false);
+  const [currentOptimizedSize, setCurrentOptimizedSize] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
+  const [showOptimizationInfo, setShowOptimizationInfo] = useState(false);
+  const shownStartupOptimizationInfoRef = useRef(false);
   const [isAddingMode, setIsAddingMode] = useState(false);
   const markerRef = useRef<unknown>(null);
   const isAddingModeRef = useRef(false);
@@ -140,6 +151,53 @@ export function HotspotEditor({
     return new window.THREE.CanvasTexture(canvas);
   }, []);
 
+  // Etykieta hotspotu wyświetlana nad markerem w widoku sceny.
+  const createHotspotLabelTexture = useCallback(
+    (text: string, isLink: boolean) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d')!;
+
+      const font = '600 34px Inter, sans-serif';
+      ctx.font = font;
+      const textWidth = Math.ceil(ctx.measureText(text).width);
+      const paddingX = 28;
+      const width = Math.max(320, textWidth + paddingX * 2);
+      const height = 92;
+      const radius = 20;
+
+      canvas.width = width;
+      canvas.height = height;
+      ctx.clearRect(0, 0, width, height);
+
+      ctx.beginPath();
+      ctx.moveTo(radius, 0);
+      ctx.lineTo(width - radius, 0);
+      ctx.quadraticCurveTo(width, 0, width, radius);
+      ctx.lineTo(width, height - radius);
+      ctx.quadraticCurveTo(width, height, width - radius, height);
+      ctx.lineTo(radius, height);
+      ctx.quadraticCurveTo(0, height, 0, height - radius);
+      ctx.lineTo(0, radius);
+      ctx.quadraticCurveTo(0, 0, radius, 0);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.70)';
+      ctx.fill();
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = isLink ? 'rgba(34, 211, 238, 0.95)' : 'rgba(245, 158, 11, 0.95)';
+      ctx.stroke();
+
+      ctx.font = font;
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.98)';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, width / 2, height / 2);
+
+      const texture = new window.THREE.CanvasTexture(canvas);
+      return { texture, aspect: width / height };
+    },
+    []
+  );
+
   // Usuń znaczniki istniejących hotspotów ze sceny i zwolnij zasoby
   const clearHotspotMarkers = useCallback(
     (viewer: { scene: { remove: (o: unknown) => void } }) => {
@@ -170,7 +228,15 @@ export function HotspotEditor({
       const THREE = window.THREE;
       const texture = createExistingHotspotTexture();
       existingHotspotTextureRef.current = texture;
+      const panoramas = configRef.current.panoramas;
+      const panoramaNameById = new Map(
+        panoramas.map((p, idx) => [p.id, `#${idx + 1} - ${p.name}`])
+      );
       for (const hp of hotspots) {
+        const markerX = -hp.position.x;
+        const markerY = hp.position.y;
+        const markerZ = hp.position.z;
+
         const mat = new THREE.SpriteMaterial({
           map: texture,
           depthTest: false,
@@ -179,12 +245,50 @@ export function HotspotEditor({
         const sprite = new THREE.Sprite(mat);
         sprite.scale.set(250, 250, 1);
         // Konwersja jak przy zapisie: config ma (-pt.x, pt.y, pt.z)
-        sprite.position.set(-hp.position.x, hp.position.y, hp.position.z);
+        sprite.position.set(markerX, markerY, markerZ);
         viewer.scene.add(sprite);
         hotspotMarkersRef.current.push(sprite);
+
+        const linkTargetName =
+          hp.type === 'link'
+            ? panoramaNameById.get(hp.target) ?? hp.target
+            : null;
+        const labelText =
+          hp.type === 'link'
+            ? `${hp.title} -> ${linkTargetName}`
+            : `${hp.title} (info)`;
+
+        const { texture: labelTexture, aspect } = createHotspotLabelTexture(
+          labelText,
+          hp.type === 'link'
+        );
+        const labelMat = new THREE.SpriteMaterial({
+          map: labelTexture,
+          depthTest: false,
+          transparent: true,
+        });
+        const labelSprite = new THREE.Sprite(labelMat);
+        const labelHeight = 120;
+        const labelWidth = Math.round(labelHeight * aspect);
+        labelSprite.scale.set(labelWidth, labelHeight, 1);
+
+        const len = Math.sqrt(
+          markerX * markerX + markerY * markerY + markerZ * markerZ
+        );
+        const nx = len > 0 ? markerX / len : 0;
+        const ny = len > 0 ? markerY / len : 0;
+        const nz = len > 0 ? markerZ / len : 0;
+        labelSprite.position.set(
+          markerX + nx * 180,
+          markerY + ny * 180 + 120,
+          markerZ + nz * 180
+        );
+
+        viewer.scene.add(labelSprite);
+        hotspotMarkersRef.current.push(labelSprite);
       }
     },
-    [createExistingHotspotTexture]
+    [createExistingHotspotTexture, createHotspotLabelTexture]
   );
 
   // Load single panorama
@@ -224,11 +328,55 @@ export function HotspotEditor({
 
       const panoData = configRef.current.panoramas[index];
       if (!panoData) {
+        setCurrentOptimizedSize(null);
         setIsLoading(false);
         return;
       }
 
-      const imagePath = `${basePath}/panoramas/${panoData.file}`;
+      const effectiveWidth = getEffectiveViewportWidth();
+      const selectedVariant = resolvePanoramaVariant(
+        panoData,
+        configRef.current.settings.optimizePanoramaForScreen,
+        effectiveWidth
+      );
+      if (
+        configRef.current.settings.optimizePanoramaForScreen &&
+        selectedVariant.width != null &&
+        selectedVariant.height != null
+      ) {
+        setCurrentOptimizedSize({
+          width: selectedVariant.width,
+          height: selectedVariant.height,
+        });
+      } else {
+        setCurrentOptimizedSize(null);
+      }
+
+      const imageFile = resolvePanoramaVariantFile(
+        panoData,
+        configRef.current.settings.optimizePanoramaForScreen,
+        effectiveWidth
+      );
+      const imagePath = `${basePath}/panoramas/${imageFile}`;
+      if (
+        configRef.current.settings.optimizePanoramaForScreen &&
+        (selectedVariant.width == null || selectedVariant.height == null)
+      ) {
+        const probe = new Image();
+        probe.onload = () => {
+          if (
+            currentPanoramaIndexRef.current === index &&
+            probe.naturalWidth > 0 &&
+            probe.naturalHeight > 0
+          ) {
+            setCurrentOptimizedSize({
+              width: probe.naturalWidth,
+              height: probe.naturalHeight,
+            });
+          }
+        };
+        probe.src = imagePath;
+      }
       const panorama = new PANOLENS.ImagePanorama(imagePath);
 
       panorama.addEventListener('enter-fade-start', () => {
@@ -505,6 +653,28 @@ export function HotspotEditor({
     }
   };
 
+  const optimizationInfoText =
+    config.settings.optimizePanoramaForScreen && currentOptimizedSize
+      ? `Załadowano zoptymalizowaną panoramę: ${currentOptimizedSize.width} x ${currentOptimizedSize.height}`
+      : null;
+
+  useEffect(() => {
+    if (!optimizationInfoText || currentPanoramaIndex !== 0) {
+      setShowOptimizationInfo(false);
+      return;
+    }
+    if (shownStartupOptimizationInfoRef.current) {
+      setShowOptimizationInfo(false);
+      return;
+    }
+    shownStartupOptimizationInfoRef.current = true;
+    setShowOptimizationInfo(true);
+    const timer = setTimeout(() => {
+      setShowOptimizationInfo(false);
+    }, 20000);
+    return () => clearTimeout(timer);
+  }, [optimizationInfoText, currentPanoramaIndex]);
+
   return (
     <>
       <Script
@@ -606,6 +776,16 @@ export function HotspotEditor({
               Tryb dodawania hotspota
             </div>
           )}
+
+          {optimizationInfoText &&
+            showOptimizationInfo &&
+            !isLoading && (
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 pointer-events-none z-30">
+                <div className="bg-black/55 text-white text-xs sm:text-sm px-3 py-1.5 rounded-full backdrop-blur-sm border border-white/20 whitespace-nowrap">
+                  {optimizationInfoText}
+                </div>
+              </div>
+            )}
         </div>
 
         {/* Side panel */}

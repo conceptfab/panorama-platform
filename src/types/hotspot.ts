@@ -27,10 +27,17 @@ export interface InfoHotspot extends BaseHotspot {
 
 export type Hotspot = LinkHotspot | InfoHotspot;
 
+export interface PanoramaVariant {
+  file: string;
+  width: number;
+  height: number;
+}
+
 export interface Panorama {
   id: string;
   name: string;
   file: string;
+  variants?: PanoramaVariant[];
   thumbnail: string;
   initialPosition: Position3D;
   hotspots: Hotspot[];

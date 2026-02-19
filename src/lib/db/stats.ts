@@ -1,11 +1,13 @@
 import { promises as fs } from 'fs';
 import path from 'path';
+import { Mutex } from 'async-mutex';
 import { getDataRoot } from '@/lib/data-root';
 import { ensureDir, deleteFile } from './json-store';
 import type { StatsEvent, UserStatsDay } from '@/types/stats';
 
 const DATA_DIR = path.join(getDataRoot(), 'data');
 const STATS_DIR = path.join(DATA_DIR, 'stats');
+const statsWriteMutex = new Mutex();
 
 /** Bezpieczny fragment ścieżki – tylko znaki dozwolone w nazwach katalogów. */
 function safeUserId(userId: string): string {
@@ -31,30 +33,122 @@ export function getDateString(date: Date = new Date()): string {
   return `${y}-${m}-${d}`;
 }
 
+function isUserStatsDay(value: unknown): value is UserStatsDay {
+  if (!value || typeof value !== 'object') return false;
+  const day = value as Partial<UserStatsDay>;
+  return (
+    typeof day.date === 'string' &&
+    typeof day.userId === 'string' &&
+    Array.isArray(day.events)
+  );
+}
+
+/**
+ * Wyciąga pierwszy kompletny obiekt JSON z początku tekstu.
+ * Pozwala odzyskać dane z pliku z "ogonem" po poprawnym JSON-ie.
+ */
+function extractFirstJsonObject(raw: string): string | null {
+  const text = raw.trimStart();
+  const start = text.indexOf('{');
+  if (start === -1) return null;
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (ch === '\\') {
+        escaped = true;
+      } else if (ch === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (ch === '"') {
+      inString = true;
+      continue;
+    }
+    if (ch === '{') depth++;
+    if (ch === '}') depth--;
+
+    if (depth === 0) {
+      return text.slice(start, i + 1);
+    }
+  }
+
+  return null;
+}
+
+function parseStatsDayContent(content: string): UserStatsDay | null {
+  try {
+    const parsed = JSON.parse(content) as unknown;
+    return isUserStatsDay(parsed) ? parsed : null;
+  } catch (err) {
+    if (!(err instanceof SyntaxError)) throw err;
+  }
+
+  const recovered = extractFirstJsonObject(content);
+  if (!recovered) return null;
+  try {
+    const parsed = JSON.parse(recovered) as unknown;
+    return isUserStatsDay(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+async function writeJsonAtomic(filePath: string, content: string): Promise<void> {
+  const tempPath = `${filePath}.tmp-${process.pid}-${Date.now()}`;
+  await fs.writeFile(tempPath, content, 'utf-8');
+  await fs.rename(tempPath, filePath);
+}
+
 /** Dopisuje zdarzenie do pliku dnia. Jeden dzień = jeden plik. */
 export async function appendEvent(
   userId: string,
   dateStr: string,
   event: StatsEvent
 ): Promise<void> {
-  const filePath = getDayFilePath(userId, dateStr);
-  const userDir = path.dirname(filePath);
-  await ensureDir(userDir);
+  await statsWriteMutex.runExclusive(async () => {
+    const filePath = getDayFilePath(userId, dateStr);
+    const userDir = path.dirname(filePath);
+    await ensureDir(userDir);
 
-  let day: UserStatsDay;
-  try {
-    const content = await fs.readFile(filePath, 'utf-8');
-    day = JSON.parse(content) as UserStatsDay;
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
-      day = { date: dateStr, userId, events: [] };
-    } else {
-      throw err;
+    let day: UserStatsDay;
+    let corruptedContent: string | null = null;
+
+    try {
+      const content = await fs.readFile(filePath, 'utf-8');
+      const parsed = parseStatsDayContent(content);
+      if (parsed) {
+        day = parsed;
+      } else {
+        corruptedContent = content;
+        day = { date: dateStr, userId, events: [] };
+      }
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+        day = { date: dateStr, userId, events: [] };
+      } else {
+        throw err;
+      }
     }
-  }
 
-  day.events.push(event);
-  await fs.writeFile(filePath, JSON.stringify(day, null, 2), 'utf-8');
+    // Zachowaj kopię uszkodzonego pliku do ewentualnej analizy.
+    if (corruptedContent) {
+      const backupPath = `${filePath}.corrupt-${Date.now()}.bak`;
+      await fs.writeFile(backupPath, corruptedContent, 'utf-8').catch(() => {});
+    }
+
+    day.events.push(event);
+    await writeJsonAtomic(filePath, JSON.stringify(day, null, 2));
+  });
 }
 
 /** Zwraca listę dat (YYYY-MM-DD), dla których użytkownik ma pliki statystyk. */
@@ -83,7 +177,8 @@ export async function getStatsDay(
   const filePath = getDayFilePath(userId, dateStr);
   try {
     const content = await fs.readFile(filePath, 'utf-8');
-    return JSON.parse(content) as UserStatsDay;
+    const parsed = parseStatsDayContent(content);
+    return parsed;
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
       return null;

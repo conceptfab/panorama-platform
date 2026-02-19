@@ -2,3 +2,6 @@
 - pliki doto zawsze webP
 
 Przeanalizuj dokładnie kod pod kątem optymalizacji, martwego kodu, over-engineeringu, bezpieczeństwa. Przygotuj szczegółowy raport poprawki.md
+
+info na widoku panoramy na dole ekranu  po środku - cos w stylu -> Panoramy zostały zooptymalizowane pod rozdzielczość n x n
+hotspoty w edytorze muszą na widoku miec etykietę i informacja do jakiej panoramy są linkiem

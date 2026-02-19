@@ -44,6 +44,35 @@ function log(msg) {
   console.log(`${colors.green}>${colors.reset} ${msg}`);
 }
 
+function parseVersionInput(input, fallbackVersion) {
+  if (!input) {
+    return {
+      packageVersion: fallbackVersion,
+      displayVersion: fallbackVersion,
+    };
+  }
+
+  // Standard semver format accepted by package.json
+  if (/^\d+\.\d+\.\d+(?:-[0-9A-Za-z][0-9A-Za-z.-]*)?$/.test(input)) {
+    return {
+      packageVersion: input,
+      displayVersion: input,
+    };
+  }
+
+  // Friendly beta format, e.g. "β 0.1.35" or "beta 0.1.35"
+  const betaMatch = input.match(/^(?:β|beta)\s*(\d+\.\d+\.\d+)$/i);
+  if (betaMatch) {
+    const baseVersion = betaMatch[1];
+    return {
+      packageVersion: `${baseVersion}-beta`,
+      displayVersion: `β ${baseVersion}`,
+    };
+  }
+
+  return null;
+}
+
 async function main() {
   const packagePath = path.join(__dirname, '..', 'package.json');
   const versionPath = path.join(__dirname, '..', 'src', 'lib', 'version.ts');
@@ -53,36 +82,44 @@ async function main() {
   console.log(`\n${colors.bold}${colors.cyan}RELEASE${colors.reset} (current: ${colors.cyan}v${currentVersion}${colors.reset})\n`);
 
   // Get version
-  const newVersion = await ask(`Version [${currentVersion}]: `);
-  const finalVersion = newVersion || currentVersion;
+  const versionInput = await ask(`Version [${currentVersion}]: `);
+  const parsedVersion = parseVersionInput(versionInput, currentVersion);
 
   // Validate
-  if (newVersion && !/^\d+\.\d+\.\d+(-[\w.]+)?$/.test(newVersion)) {
+  if (!parsedVersion) {
     console.error(`${colors.red}Invalid version format${colors.reset}`);
     rl.close();
     process.exit(1);
   }
 
+  const finalVersion = parsedVersion.packageVersion;
+  const finalVersionLabel = parsedVersion.displayVersion;
+  const formattedVersionLabel = finalVersionLabel.startsWith('β')
+    ? finalVersionLabel
+    : `v${finalVersionLabel}`;
+
   // Get commit message
   const message = await ask('Message (optional): ');
-  const finalMessage = message ? `v${finalVersion} ${message}` : `v${finalVersion}`;
+  const finalMessage = message
+    ? `${formattedVersionLabel} ${message}`
+    : formattedVersionLabel;
 
   rl.close();
 
   console.log('');
 
   // Update version if changed
-  if (newVersion && newVersion !== currentVersion) {
-    packageJson.version = newVersion;
+  if (versionInput && finalVersion !== currentVersion) {
+    packageJson.version = finalVersion;
     fs.writeFileSync(packagePath, JSON.stringify(packageJson, null, 2) + '\n');
-    log(`package.json: ${currentVersion} -> ${newVersion}`);
+    log(`package.json: ${currentVersion} -> ${finalVersion}`);
 
     // Update version.ts if exists
     if (fs.existsSync(versionPath)) {
       let versionTs = fs.readFileSync(versionPath, 'utf8');
       versionTs = versionTs.replace(
         /export const APP_VERSION = ['"].*['"]/,
-        `export const APP_VERSION = '${newVersion}'`
+        `export const APP_VERSION = '${finalVersion}'`
       );
       fs.writeFileSync(versionPath, versionTs);
       log(`version.ts: updated`);
@@ -99,7 +136,7 @@ async function main() {
   log('Pushing to remote...');
   exec('git push', true);
 
-  console.log(`\n${colors.green}${colors.bold}Done!${colors.reset} v${finalVersion} released.\n`);
+  console.log(`\n${colors.green}${colors.bold}Done!${colors.reset} ${formattedVersionLabel} released.\n`);
 }
 
 main().catch((error) => {

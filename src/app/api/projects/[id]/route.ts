@@ -6,10 +6,13 @@ import {
 } from '@/lib/auth/session';
 import {
   getProjectById,
+  getProjectConfig,
   updateProject,
+  updateProjectConfig,
   deleteProject,
 } from '@/lib/db/projects';
 import { getUserById } from '@/lib/db/users';
+import { ensurePanoramaVariantsForProject } from '@/lib/panorama-variants-server';
 import { z } from 'zod';
 
 const updateProjectSchema = z.object({
@@ -17,6 +20,7 @@ const updateProjectSchema = z.object({
   description: z.string().max(1000).optional(),
   groupIds: z.array(z.string()).optional(),
   isPublished: z.boolean().optional(),
+  optimizePanoramaForScreen: z.boolean().optional(),
 });
 
 interface RouteParams {
@@ -71,6 +75,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     const body = await request.json();
     const updates = updateProjectSchema.parse(body);
+    const { optimizePanoramaForScreen, ...projectUpdates } = updates;
 
     const project = await getProjectById(id);
     if (!project) {
@@ -95,10 +100,29 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       }
     }
 
-    const updated = await updateProject(id, updates);
+    const updated = await updateProject(id, projectUpdates);
     if (!updated) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
+
+    if (optimizePanoramaForScreen !== undefined) {
+      const config = await getProjectConfig(id);
+      if (!config) {
+        return NextResponse.json({ error: 'Config not found' }, { status: 404 });
+      }
+      config.settings.optimizePanoramaForScreen = optimizePanoramaForScreen;
+      if (optimizePanoramaForScreen) {
+        await ensurePanoramaVariantsForProject(id, config);
+      }
+      const saved = await updateProjectConfig(id, config);
+      if (!saved) {
+        return NextResponse.json(
+          { error: 'Failed to update config' },
+          { status: 500 }
+        );
+      }
+    }
+
     return NextResponse.json({ project: updated });
   } catch (error) {
     if (error instanceof Error && error.message.includes('Forbidden')) {

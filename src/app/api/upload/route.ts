@@ -11,11 +11,12 @@ import {
 import { getUserById } from '@/lib/db/users';
 import { getDataRoot } from '@/lib/data-root';
 import { generateId } from '@/utils/helpers';
-import { Panorama } from '@/types';
+import { Panorama, PanoramaVariant } from '@/types';
 
 const UPLOADS_DIR = path.join(getDataRoot(), 'uploads', 'projects');
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 const ALLOWED_TYPES = ['image/webp', 'image/jpeg', 'image/png'];
+const PANORAMA_VARIANT_WIDTHS = [2048, 4096, 6144];
 
 export async function POST(request: NextRequest) {
   try {
@@ -85,19 +86,52 @@ export async function POST(request: NextRequest) {
 
       // Generate unique filename
       const panoId = generateId('pano');
-      const ext = file.type === 'image/png' ? 'png' : 'webp';
-      const filename = `${panoId}.${ext}`;
+      const filename = `${panoId}.webp`;
       const thumbFilename = `thumb_${panoId}.webp`;
 
-      // Save panorama (convert to webp if needed)
-      const panoramaPath = path.join(panoramasDir, filename);
+      // Save master panorama (highest available quality for this upload)
+      const masterPath = path.join(panoramasDir, filename);
       if (file.type === 'image/webp') {
-        await writeFile(panoramaPath, buffer);
+        await writeFile(masterPath, buffer);
       } else {
-        await sharp(buffer)
-          .webp({ quality: 85 })
-          .toFile(panoramaPath.replace(/\.[^.]+$/, '.webp'));
+        await sharp(buffer).webp({ quality: 85 }).toFile(masterPath);
       }
+
+      const masterMetadata = await sharp(masterPath).metadata();
+      if (!masterMetadata.width || !masterMetadata.height) {
+        continue;
+      }
+      const masterAspectRatio = masterMetadata.width / masterMetadata.height;
+
+      // Generate additional panorama variants (2:1 equirectangular)
+      const targetWidths = Array.from(
+        new Set(
+          PANORAMA_VARIANT_WIDTHS.filter((w) => w < masterMetadata.width)
+        )
+      ).sort((a, b) => a - b);
+
+      const variants: PanoramaVariant[] = [];
+      for (const width of targetWidths) {
+        const height = Math.max(1, Math.round(width / masterAspectRatio));
+        const variantFilename = `${panoId}_${width}.webp`;
+        const variantPath = path.join(panoramasDir, variantFilename);
+        await sharp(masterPath)
+          .resize({
+            width,
+            height,
+            fit: 'inside',
+            withoutEnlargement: true,
+          })
+          .webp({ quality: width >= 6144 ? 85 : 82 })
+          .toFile(variantPath);
+        variants.push({ file: variantFilename, width, height });
+      }
+
+      variants.push({
+        file: filename,
+        width: masterMetadata.width,
+        height: masterMetadata.height,
+      });
 
       // Generate thumbnail (800x400)
       const thumbnailPath = path.join(thumbnailsDir, thumbFilename);
@@ -110,7 +144,8 @@ export async function POST(request: NextRequest) {
       const newPanorama: Panorama = {
         id: panoId,
         name: file.name.replace(/\.[^.]+$/, ''),
-        file: filename.replace(/\.[^.]+$/, '.webp'),
+        file: filename,
+        variants: variants.sort((a, b) => a.width - b.width),
         thumbnail: thumbFilename,
         initialPosition: { x: 1000, y: 0, z: 0 },
         hotspots: [],

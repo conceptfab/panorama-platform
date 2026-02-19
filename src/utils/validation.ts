@@ -109,6 +109,15 @@ export const panoramaSchema = z.object({
   id: z.string(),
   name: z.string().min(1).max(200),
   file: z.string(),
+  variants: z
+    .array(
+      z.object({
+        file: z.string(),
+        width: z.number().int().positive(),
+        height: z.number().int().positive(),
+      })
+    )
+    .optional(),
   thumbnail: z.string(),
   initialPosition: position3DSchema,
   hotspots: z.array(hotspotSchema),
@@ -120,6 +129,7 @@ export const projectSettingsSchema = z.object({
   autoRotateSpeed: z.number().min(0).max(10),
   autoRotateDelay: z.number().min(0),
   cameraFov: z.number().min(10).max(120),
+  optimizePanoramaForScreen: z.boolean().default(true),
   controlBar: z.boolean(),
   splashDuration: z.number().min(0),
   fadeDuration: z.number().min(0),

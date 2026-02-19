@@ -8,6 +8,10 @@ import { ArrowLeft } from 'lucide-react';
 import { SplashScreen } from './SplashScreen';
 import { ViewerControls } from './ViewerControls';
 import Script from 'next/script';
+import {
+  getEffectiveViewportWidth,
+  resolvePanoramaVariant,
+} from '@/lib/panorama-variants';
 
 interface PanoViewerProps {
   config: ProjectConfig;
@@ -33,7 +37,12 @@ export function PanoViewer({
   const [scriptsLoaded, setScriptsLoaded] = useState(false);
   const [autoRotate, setAutoRotate] = useState(config.settings.autoRotate);
   const [threeLoaded, setThreeLoaded] = useState(false);
-  const [, setCurrentPanoramaIndex] = useState(0);
+  const [currentPanoramaIndex, setCurrentPanoramaIndex] = useState(0);
+  const [optimizedSizesByPanorama, setOptimizedSizesByPanorama] = useState<
+    Array<{ width: number; height: number } | null>
+  >([]);
+  const [showOptimizationInfo, setShowOptimizationInfo] = useState(false);
+  const shownStartupOptimizationInfoRef = useRef(false);
   const viewStartTimeRef = useRef<number | null>(null);
 
   /** Losowa prędkość 0.2–0.5, losowy kierunek. Zwraca czas pełnego obrotu w ms (Three.js autoRotateSpeed: 2 ≈ 30 s). */
@@ -104,10 +113,25 @@ export function PanoViewer({
     // Load panoramas
     const panoramas: unknown[] = [];
     let loadedCount = 0;
+    const effectiveWidth = getEffectiveViewportWidth();
+    const resolvedSizes: Array<{ width: number; height: number } | null> = [];
+    const selectedFiles: string[] = [];
 
     config.panoramas.forEach((panoData, index) => {
-      const imagePath = `${basePath}/panoramas/${panoData.file}`;
+      const selectedVariant = resolvePanoramaVariant(
+        panoData,
+        config.settings.optimizePanoramaForScreen,
+        effectiveWidth
+      );
+      selectedFiles[index] = selectedVariant.file;
+      const imagePath = `${basePath}/panoramas/${selectedVariant.file}`;
       const panorama = new PANOLENS.ImagePanorama(imagePath);
+      resolvedSizes[index] =
+        config.settings.optimizePanoramaForScreen &&
+        selectedVariant.width != null &&
+        selectedVariant.height != null
+          ? { width: selectedVariant.width, height: selectedVariant.height }
+          : null;
 
       panorama.addEventListener('enter-fade-start', () => {
         const pos = panoData.initialPosition;
@@ -175,20 +199,37 @@ export function PanoViewer({
     });
 
     // Preload images
-    config.panoramas.forEach((panoData) => {
+    config.panoramas.forEach((_, index) => {
       const img = new Image();
       img.onload = () => {
         loadedCount++;
         setLoadProgress((loadedCount / config.panoramas.length) * 100);
+        if (
+          config.settings.optimizePanoramaForScreen &&
+          !resolvedSizes[index] &&
+          img.naturalWidth > 0 &&
+          img.naturalHeight > 0
+        ) {
+          resolvedSizes[index] = {
+            width: img.naturalWidth,
+            height: img.naturalHeight,
+          };
+          setOptimizedSizesByPanorama((prev) => {
+            const next = [...prev];
+            next[index] = resolvedSizes[index];
+            return next;
+          });
+        }
       };
       img.onerror = () => {
         loadedCount++;
         setLoadProgress((loadedCount / config.panoramas.length) * 100);
       };
-      img.src = `${basePath}/panoramas/${panoData.file}`;
+      img.src = `${basePath}/panoramas/${selectedFiles[index]}`;
     });
 
     panoramasRef.current = panoramas;
+    setOptimizedSizesByPanorama(resolvedSizes);
 
     // Add all panoramas to viewer
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -214,7 +255,12 @@ export function PanoViewer({
     setTimeout(() => {
       setIsLoading(false);
     }, config.settings.splashDuration);
-  }, [config, basePath, applyRandomAutoRotate, scheduleNextRotation]);
+  }, [
+    config,
+    basePath,
+    applyRandomAutoRotate,
+    scheduleNextRotation,
+  ]);
 
   useEffect(() => {
     if (scriptsLoaded) {
@@ -532,6 +578,29 @@ export function PanoViewer({
     });
   }, [projectId, isAdmin]);
 
+  const optimizedSize = optimizedSizesByPanorama[currentPanoramaIndex];
+  const optimizationInfoText =
+    config.settings.optimizePanoramaForScreen && optimizedSize
+      ? `Załadowano zoptymalizowaną panoramę: ${optimizedSize.width} x ${optimizedSize.height}`
+      : null;
+
+  useEffect(() => {
+    if (!optimizationInfoText || currentPanoramaIndex !== 0) {
+      setShowOptimizationInfo(false);
+      return;
+    }
+    if (shownStartupOptimizationInfoRef.current) {
+      setShowOptimizationInfo(false);
+      return;
+    }
+    shownStartupOptimizationInfoRef.current = true;
+    setShowOptimizationInfo(true);
+    const timer = setTimeout(() => {
+      setShowOptimizationInfo(false);
+    }, 20000);
+    return () => clearTimeout(timer);
+  }, [optimizationInfoText, currentPanoramaIndex]);
+
   return (
     <>
       <Script
@@ -590,6 +659,14 @@ export function PanoViewer({
             isAdmin && projectId ? handleGenerateThumbnail : undefined
           }
         />
+
+        {optimizationInfoText && showOptimizationInfo && !isLoading && (
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40 pointer-events-none">
+            <div className="bg-black/55 text-white text-sm px-4 py-2 rounded-full backdrop-blur-sm border border-white/20">
+              {optimizationInfoText}
+            </div>
+          </div>
+        )}
       </div>
     </>
   );

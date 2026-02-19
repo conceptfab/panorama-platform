@@ -76,6 +76,7 @@ export function convertLegacyConfig(legacy: LegacyPanoramaConfig): ProjectConfig
       autoRotateSpeed: 0.5,
       autoRotateDelay: 30000,
       cameraFov: 55,
+      optimizePanoramaForScreen: true,
       controlBar: false,
       splashDuration: 3000,
       fadeDuration: 2000,

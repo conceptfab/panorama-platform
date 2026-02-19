@@ -49,6 +49,9 @@ export default async function ProjectEditPage({ params }: PageProps) {
       <ProjectEditForm
         project={project}
         groups={groups}
+        initialOptimizePanoramaForScreen={
+          config?.settings.optimizePanoramaForScreen ?? true
+        }
         editorGroupIds={editorGroupIds}
         groupsReadOnly={session.role === 'editor'}
       />

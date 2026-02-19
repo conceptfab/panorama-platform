@@ -12,6 +12,7 @@ import { Project, ProjectsData, ProjectConfig } from '@/types';
 import { generateId, formatDate, projectSlugFromName } from '@/utils/helpers';
 import { projectsDataSchema, projectConfigSchema } from '@/utils/validation';
 import { syncGroupsProjectIdsFromProjects } from './sync-groups-projects';
+import { ensurePanoramaVariantsForProject } from '@/lib/panorama-variants-server';
 
 const PROJECTS_FILE = 'projects.json';
 const UPLOADS_DIR = path.join(getDataRoot(), 'uploads', 'projects');
@@ -105,6 +106,7 @@ export async function createProject(
       autoRotateSpeed: 0.5,
       autoRotateDelay: 30000,
       cameraFov: 55,
+      optimizePanoramaForScreen: true,
       controlBar: false,
       splashDuration: 3000,
       fadeDuration: 2000,
@@ -189,8 +191,18 @@ export async function getProjectConfig(
   const configPath = path.join(UPLOADS_DIR, id, 'config.json');
   try {
     const content = await fs.readFile(configPath, 'utf-8');
-    const config = JSON.parse(content);
-    return projectConfigSchema.parse(config);
+    const config = projectConfigSchema.parse(JSON.parse(content));
+
+    // Auto-migration: dla starszych projektów generuje brakujące warianty,
+    // gdy optymalizacja jest włączona.
+    const ensured = await ensurePanoramaVariantsForProject(id, config);
+    if (ensured.changed) {
+      ensured.config.updatedAt = formatDate(new Date());
+      await fs.writeFile(configPath, JSON.stringify(ensured.config, null, 2));
+      return ensured.config;
+    }
+
+    return config;
   } catch {
     return null;
   }

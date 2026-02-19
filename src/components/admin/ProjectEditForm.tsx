@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import {
   Card,
   CardContent,
@@ -22,6 +23,7 @@ import { cn } from '@/lib/utils';
 interface ProjectEditFormProps {
   project: Project;
   groups: Group[];
+  initialOptimizePanoramaForScreen: boolean;
   /** Dla edytora – tylko te grupy są wybieralne (jego grupy). */
   editorGroupIds?: string[];
   /** W trybie Edytora – sekcja „Grupy (dostęp do projektu)” jest zablokowana (tylko do odczytu). */
@@ -31,6 +33,7 @@ interface ProjectEditFormProps {
 export function ProjectEditForm({
   project,
   groups,
+  initialOptimizePanoramaForScreen,
   editorGroupIds,
   groupsReadOnly = false,
 }: ProjectEditFormProps) {
@@ -43,6 +46,9 @@ export function ProjectEditForm({
   const [name, setName] = useState(project.name);
   const [description, setDescription] = useState(project.description);
   const [isPublished, setIsPublished] = useState(project.isPublished);
+  const [optimizePanoramaForScreen, setOptimizePanoramaForScreen] = useState(
+    initialOptimizePanoramaForScreen
+  );
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>(
     project.groupIds ?? []
   );
@@ -87,6 +93,7 @@ export function ProjectEditForm({
         body: JSON.stringify({
           name,
           description,
+          optimizePanoramaForScreen,
           ...(groupsReadOnly ? {} : { groupIds: selectedGroupIds }),
         }),
       });
@@ -159,6 +166,23 @@ export function ProjectEditForm({
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={4}
+              />
+            </div>
+
+            <div className="flex items-center justify-between rounded-md border p-4">
+              <div className="space-y-1">
+                <Label htmlFor="optimize-screen">
+                  Optymalizuj panoramy do ekranu klienta
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  OFF: maksymalna jakość. ON: po zapisie system przygotuje
+                  zestawy wariantów i będzie dobierał plik do ekranu klienta.
+                </p>
+              </div>
+              <Switch
+                id="optimize-screen"
+                checked={optimizePanoramaForScreen}
+                onCheckedChange={setOptimizePanoramaForScreen}
               />
             </div>
 

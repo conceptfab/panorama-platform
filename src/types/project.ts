@@ -23,6 +23,7 @@ export interface ProjectSettings {
   autoRotateSpeed: number;
   autoRotateDelay: number;
   cameraFov: number;
+  optimizePanoramaForScreen: boolean;
   controlBar: boolean;
   splashDuration: number;
   fadeDuration: number;
