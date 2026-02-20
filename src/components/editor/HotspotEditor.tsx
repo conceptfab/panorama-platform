@@ -31,8 +31,8 @@ import { generateId } from '@/utils/helpers';
 import {
   getEffectiveViewportWidth,
   resolvePanoramaVariant,
-  resolvePanoramaVariantFile,
 } from '@/lib/panorama-variants';
+import { buildPanoramaImagePath } from '@/lib/panorama-path';
 
 interface HotspotEditorProps {
   projectId: string;
@@ -352,12 +352,7 @@ export function HotspotEditor({
         setCurrentOptimizedSize(null);
       }
 
-      const imageFile = resolvePanoramaVariantFile(
-        panoData,
-        configRef.current.settings.optimizePanoramaForScreen,
-        effectiveWidth
-      );
-      const imagePath = `${basePath}/panoramas/${imageFile}`;
+      const imagePath = buildPanoramaImagePath(basePath, selectedVariant.file);
       if (
         configRef.current.settings.optimizePanoramaForScreen &&
         (selectedVariant.width == null || selectedVariant.height == null)

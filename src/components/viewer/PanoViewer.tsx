@@ -12,6 +12,7 @@ import {
   getEffectiveViewportWidth,
   resolvePanoramaVariant,
 } from '@/lib/panorama-variants';
+import { buildPanoramaImagePath } from '@/lib/panorama-path';
 
 interface PanoViewerProps {
   config: ProjectConfig;
@@ -34,6 +35,7 @@ export function PanoViewer({
   );
   const [isLoading, setIsLoading] = useState(true);
   const [loadProgress, setLoadProgress] = useState(0);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [scriptsLoaded, setScriptsLoaded] = useState(false);
   const [autoRotate, setAutoRotate] = useState(config.settings.autoRotate);
   const [threeLoaded, setThreeLoaded] = useState(false);
@@ -88,6 +90,7 @@ export function PanoViewer({
 
   const initViewer = useCallback(() => {
     if (!containerRef.current || !window.PANOLENS || !window.THREE) return;
+    setLoadError(null);
 
     const THREE = window.THREE;
     const PANOLENS = window.PANOLENS;
@@ -113,9 +116,10 @@ export function PanoViewer({
     // Load panoramas
     const panoramas: unknown[] = [];
     let loadedCount = 0;
+    let failedCount = 0;
     const effectiveWidth = getEffectiveViewportWidth();
     const resolvedSizes: Array<{ width: number; height: number } | null> = [];
-    const selectedFiles: string[] = [];
+    const selectedSources: string[] = [];
 
     config.panoramas.forEach((panoData, index) => {
       const selectedVariant = resolvePanoramaVariant(
@@ -123,8 +127,8 @@ export function PanoViewer({
         config.settings.optimizePanoramaForScreen,
         effectiveWidth
       );
-      selectedFiles[index] = selectedVariant.file;
-      const imagePath = `${basePath}/panoramas/${selectedVariant.file}`;
+      const imagePath = buildPanoramaImagePath(basePath, selectedVariant.file);
+      selectedSources[index] = imagePath;
       const panorama = new PANOLENS.ImagePanorama(imagePath);
       resolvedSizes[index] =
         config.settings.optimizePanoramaForScreen &&
@@ -222,10 +226,20 @@ export function PanoViewer({
         }
       };
       img.onerror = () => {
+        failedCount++;
         loadedCount++;
         setLoadProgress((loadedCount / config.panoramas.length) * 100);
+        if (selectedSources[index]) {
+          console.error('Panorama preload failed:', selectedSources[index]);
+        }
+        if (failedCount >= config.panoramas.length) {
+          setLoadError(
+            'Nie udało się wczytać panoram. Sprawdź pliki w projekcie (nazwy muszą zgadzać się 1:1 z config.json).'
+          );
+          setIsLoading(false);
+        }
       };
-      img.src = `${basePath}/panoramas/${selectedFiles[index]}`;
+      img.src = selectedSources[index];
     });
 
     panoramasRef.current = panoramas;
@@ -659,6 +673,14 @@ export function PanoViewer({
             isAdmin && projectId ? handleGenerateThumbnail : undefined
           }
         />
+
+        {loadError && (
+          <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-40 max-w-[90vw]">
+            <div className="bg-red-950/80 text-red-100 text-sm px-4 py-2 rounded-lg border border-red-400/40 backdrop-blur-sm">
+              {loadError}
+            </div>
+          </div>
+        )}
 
         {optimizationInfoText && showOptimizationInfo && !isLoading && (
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40 pointer-events-none">

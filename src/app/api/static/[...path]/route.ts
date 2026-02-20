@@ -3,6 +3,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { getDataRoot } from '@/lib/data-root';
 import { getSession } from '@/lib/auth/session';
+import { resolveExistingUploadPath } from '@/lib/uploads-path';
 
 const UPLOADS_DIR = path.join(getDataRoot(), 'uploads');
 
@@ -27,30 +28,26 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     const { path: pathSegments } = await params;
-    const filePath = path.join(UPLOADS_DIR, ...pathSegments);
-
-    // Poprawiona walidacja path traversal
-    const resolvedPath = path.resolve(filePath);
-    const resolvedUploads = path.resolve(UPLOADS_DIR);
-    if (
-      !resolvedPath.startsWith(resolvedUploads + path.sep) &&
-      resolvedPath !== resolvedUploads
-    ) {
-      return NextResponse.json({ error: 'Invalid path' }, { status: 400 });
+    const resolvedPath = await resolveExistingUploadPath(
+      UPLOADS_DIR,
+      pathSegments
+    );
+    if (!resolvedPath) {
+      return NextResponse.json({ error: 'File not found' }, { status: 404 });
     }
 
     // Check if file exists
     try {
-      await fs.access(filePath);
+      await fs.access(resolvedPath);
     } catch {
       return NextResponse.json({ error: 'File not found' }, { status: 404 });
     }
 
     // Read file
-    const file = await fs.readFile(filePath);
+    const file = await fs.readFile(resolvedPath);
 
     // Determine content type
-    const ext = path.extname(filePath).toLowerCase();
+    const ext = path.extname(resolvedPath).toLowerCase();
     const contentType = MIME_TYPES[ext] || 'application/octet-stream';
 
     return new NextResponse(file, {
