@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import Script from 'next/script';
 import Link from 'next/link';
 import { ProjectConfig, Hotspot, Position3D } from '@/types';
@@ -25,6 +25,7 @@ import {
   RotateCw,
   Camera,
   Maximize,
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { generateId } from '@/utils/helpers';
@@ -66,6 +67,16 @@ export function HotspotEditor({
     width: number;
     height: number;
   } | null>(null);
+  const [replaceFiles, setReplaceFiles] = useState<Record<string, File | null>>(
+    {}
+  );
+  const [replaceError, setReplaceError] = useState<string | null>(null);
+  const [replaceMessage, setReplaceMessage] = useState<string | null>(null);
+  const [isReplacingPanoramas, setIsReplacingPanoramas] = useState(false);
+  const replaceCount = useMemo(
+    () => Object.values(replaceFiles).filter(Boolean).length,
+    [replaceFiles]
+  );
   const [showOptimizationInfo, setShowOptimizationInfo] = useState(false);
   const shownStartupOptimizationInfoRef = useRef(false);
   const [isAddingMode, setIsAddingMode] = useState(false);
@@ -503,6 +514,65 @@ export function HotspotEditor({
     loadPanorama(index);
   };
 
+  const handleReplaceFile = useCallback((panoramaId: string, file: File | null) => {
+    setReplaceFiles((prev) => ({ ...prev, [panoramaId]: file }));
+    setReplaceError(null);
+    setReplaceMessage(null);
+  }, []);
+
+  const handleReplaceSubmit = useCallback(async () => {
+    if (replaceCount === 0) {
+      setReplaceError('Wybierz przynajmniej jeden plik');
+      return;
+    }
+
+    setIsReplacingPanoramas(true);
+    setReplaceError(null);
+    setReplaceMessage(null);
+
+    const formData = new FormData();
+    for (const [panoramaId, file] of Object.entries(replaceFiles)) {
+      if (file) {
+        formData.append(`panorama:${panoramaId}`, file);
+      }
+    }
+
+    try {
+      const res = await fetch(
+        `/api/projects/${projectId}/replace-panoramas`,
+        {
+          method: 'POST',
+          body: formData,
+        }
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || 'Nie udało się zastąpić panoram');
+      }
+
+      toast.success(
+        data.message ??
+          'Wybrane panoramy zostały zastąpione i trafiły do poczekalni'
+      );
+      setReplaceMessage(
+        data.message ?? 'Wybrane panoramy przeniesiono do poczekalni'
+      );
+      setReplaceFiles({});
+
+      const reloadRes = await fetch(`/api/projects/${projectId}/config`);
+      if (reloadRes.ok) {
+        const refreshed = await reloadRes.json();
+        setConfig(refreshed);
+      }
+    } catch (err) {
+      setReplaceError(
+        err instanceof Error ? err.message : 'Nie udało się zastąpić panoram'
+      );
+    } finally {
+      setIsReplacingPanoramas(false);
+    }
+  }, [projectId, replaceFiles, replaceCount]);
+
   const handleAddHotspot = () => {
     if (!clickedPosition) {
       toast.error('Kliknij w panoramę, aby wybrać pozycję');
@@ -812,6 +882,91 @@ export function HotspotEditor({
                     ))}
                   </SelectContent>
                 </Select>
+              </CardContent>
+            </Card>
+
+            {/* Panorama replacement */}
+            <Card>
+              <CardHeader className="p-4 pb-2">
+                <CardTitle className="text-sm">Wymiana panoram</CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 pt-2 space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  Wybierz nowe zdjęcia dla wybranych panoram. Zastąpione
+                  materiały trafią do{' '}
+                  <span className="font-mono text-[11px]">
+                    /uploads/projects/{projectId}/pending-panoramas
+                  </span>{' '}
+                  (poczekalnia). Możesz je usunąć ręcznie po weryfikacji.
+                </p>
+                {replaceMessage && (
+                  <p className="text-xs text-green-600">{replaceMessage}</p>
+                )}
+                {replaceError && (
+                  <p className="text-xs text-destructive">{replaceError}</p>
+                )}
+                <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                  {config.panoramas.map((pano, idx) => {
+                    const inputId = `replace-${pano.id}`;
+                    return (
+                      <div
+                        key={pano.id}
+                        className="rounded-lg border border-muted/50 px-3 py-2 space-y-1"
+                      >
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>
+                            #{String(idx + 1).padStart(2, '0')} –{' '}
+                            {pano.name || pano.id}
+                          </span>
+                          <span className="truncate max-w-[90px]">
+                            {pano.file}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            id={inputId}
+                            type="file"
+                            className="hidden"
+                            accept="image/webp,image/jpeg,image/png"
+                            onChange={(event) => {
+                              const file = event.target.files?.[0] ?? null;
+                              handleReplaceFile(pano.id, file);
+                              event.target.value = '';
+                            }}
+                          />
+                          <label htmlFor={inputId}>
+                            <Button variant="outline" size="xs">
+                              Wybierz plik
+                            </Button>
+                          </label>
+                          <span className="text-xs text-muted-foreground truncate max-w-[120px]">
+                            {replaceFiles[pano.id]?.name ?? 'Brak pliku'}
+                          </span>
+                          {replaceFiles[pano.id] && (
+                            <Button
+                              variant="ghost"
+                              size="icon-xs"
+                              onClick={() => handleReplaceFile(pano.id, null)}
+                              className="px-0"
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <Button
+                  className="w-full"
+                  disabled={replaceCount === 0 || isReplacingPanoramas}
+                  onClick={handleReplaceSubmit}
+                >
+                  {isReplacingPanoramas && (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  )}
+                  Zastąp panoramy ({replaceCount})
+                </Button>
               </CardContent>
             </Card>
 

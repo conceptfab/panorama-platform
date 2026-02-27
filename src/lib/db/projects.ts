@@ -143,6 +143,96 @@ export async function createProject(
   return newProject;
 }
 
+export interface CloneProjectOptions {
+  name?: string;
+  description?: string;
+  groupIds?: string[];
+  createdBy: string;
+}
+
+export async function cloneProject(
+  id: string,
+  options: CloneProjectOptions
+): Promise<Project> {
+  const original = await getProjectById(id);
+  if (!original) {
+    throw new Error('Project not found');
+  }
+
+  const config = await getProjectConfig(id);
+  if (!config) {
+    throw new Error('Config not found');
+  }
+
+  const fallbackName = original.name
+    ? `${original.name} (kopia)`
+    : 'Kopia projektu';
+  const normalizedName = options.name?.trim() || fallbackName;
+  if (!normalizedName) {
+    throw new Error('Project name cannot be empty');
+  }
+  const name = normalizedName.slice(0, 200);
+  const descriptionBase =
+    options.description?.trim() ?? original.description ?? '';
+  const description = descriptionBase.slice(0, 1000);
+
+  const projects = await getProjects();
+  const existingIds = projects.map((p) => p.id);
+  const baseSlug =
+    projectSlugFromName(name, description) || generateId('proj');
+  const newId = ensureUniqueProjectSlug(existingIds, baseSlug);
+
+  await ensureDir(UPLOADS_DIR);
+  const sourceDir = path.join(UPLOADS_DIR, id);
+  const destinationDir = path.join(UPLOADS_DIR, newId);
+  if (existsSync(destinationDir)) {
+    throw new Error('Destination already exists');
+  }
+  await fs.cp(sourceDir, destinationDir, { recursive: true });
+
+  const now = formatDate(new Date());
+  const updatedConfig: ProjectConfig = {
+    ...config,
+    projectName: name,
+    description,
+    createdAt: now,
+    updatedAt: now,
+  };
+  const validatedConfig = projectConfigSchema.parse(updatedConfig);
+  await fs.writeFile(
+    path.join(destinationDir, 'config.json'),
+    JSON.stringify(validatedConfig, null, 2),
+    'utf-8'
+  );
+
+  let thumbnailUrl = '';
+  if (
+    validatedConfig.panoramas.length &&
+    validatedConfig.panoramas[0].thumbnail
+  ) {
+    thumbnailUrl = `/uploads/projects/${newId}/thumbnails/${validatedConfig.panoramas[0].thumbnail}`;
+  }
+
+  const newProject: Project = {
+    id: newId,
+    name,
+    description,
+    thumbnailUrl,
+    configPath: `/uploads/projects/${newId}/config.json`,
+    createdAt: now,
+    updatedAt: now,
+    createdBy: options.createdBy,
+    groupIds: options.groupIds ?? original.groupIds,
+    isPublished: false,
+    panoramaCount: validatedConfig.panoramas.length,
+  };
+
+  projects.push(newProject);
+  await writeJsonFile<ProjectsData>(PROJECTS_FILE, { projects });
+  await syncGroupsProjectIdsFromProjects();
+  return newProject;
+}
+
 export async function updateProject(
   id: string,
   updates: Partial<Omit<Project, 'id' | 'createdAt' | 'createdBy'>>,

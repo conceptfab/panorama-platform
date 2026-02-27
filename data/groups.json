@@ -7,7 +7,8 @@
       "color": "#20b2aa",
       "createdAt": "2026-01-01T00:00:00Z",
       "projectIds": [
-        "Jutrzenki"
+        "Jutrzenki",
+        "jutrzenki-kopia"
       ]
     },
     {
@@ -17,7 +18,8 @@
       "color": "#0055ff",
       "createdAt": "2026-02-02T14:35:34.044Z",
       "projectIds": [
-        "Jutrzenki"
+        "Jutrzenki",
+        "jutrzenki-kopia"
       ]
     }
   ]

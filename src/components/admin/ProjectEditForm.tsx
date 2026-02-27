@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Project, Group } from '@/types';
+import { Group, Project, ProjectConfig } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,7 +16,7 @@ import {
   CardTitle,
   CardAction,
 } from '@/components/ui/card';
-import { ArrowLeft, Loader2, Save, Globe, GlobeLock } from 'lucide-react';
+import { ArrowLeft, Loader2, Save, Globe, GlobeLock, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -52,6 +52,20 @@ export function ProjectEditForm({
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>(
     project.groupIds ?? []
   );
+  const [config, setConfig] = useState<ProjectConfig | null>(null);
+  const [isConfigLoading, setIsConfigLoading] = useState(true);
+  const [configError, setConfigError] = useState<string | null>(null);
+  const [replaceFiles, setReplaceFiles] = useState<Record<string, File | null>>(
+    {}
+  );
+  const [replaceError, setReplaceError] = useState<string | null>(null);
+  const [replaceMessage, setReplaceMessage] = useState<string | null>(null);
+  const [isReplacing, setIsReplacing] = useState(false);
+  const replaceCount = useMemo(
+    () => Object.values(replaceFiles).filter(Boolean).length,
+    [replaceFiles]
+  );
+  const pendingDir = `/uploads/projects/${project.id}/pending-panoramas`;
 
   const toggleGroup = (groupId: string) => {
     setSelectedGroupIds((prev) =>
@@ -82,7 +96,7 @@ export function ProjectEditForm({
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
@@ -110,6 +124,84 @@ export function ProjectEditForm({
       setIsLoading(false);
     }
   };
+
+  const fetchConfig = useCallback(async () => {
+    setIsConfigLoading(true);
+    setConfigError(null);
+    try {
+      const res = await fetch(`/api/projects/${project.id}/config`);
+      if (!res.ok) {
+        throw new Error('Nie udało się pobrać konfiguracji panoram');
+      }
+      const data: ProjectConfig = await res.json();
+      setConfig(data);
+    } catch (error) {
+      setConfigError(
+        error instanceof Error
+          ? error.message
+          : 'Nie udało się pobrać konfiguracji panoram'
+      );
+    } finally {
+      setIsConfigLoading(false);
+    }
+  }, [project.id]);
+
+  useEffect(() => {
+    fetchConfig();
+  }, [fetchConfig]);
+
+  const handleReplaceFile = useCallback(
+    (panoramaId: string, file: File | null) => {
+      setReplaceFiles((prev) => ({ ...prev, [panoramaId]: file }));
+      setReplaceError(null);
+      setReplaceMessage(null);
+    },
+    []
+  );
+
+  const handleReplaceSubmit = useCallback(async () => {
+    if (replaceCount === 0) {
+      setReplaceError('Wybierz przynajmniej jeden plik');
+      return;
+    }
+
+    setIsReplacing(true);
+    setReplaceError(null);
+    setReplaceMessage(null);
+
+    const formData = new FormData();
+    Object.entries(replaceFiles).forEach(([panoramaId, file]) => {
+      if (file) {
+        formData.append(`panorama:${panoramaId}`, file);
+      }
+    });
+
+    try {
+      const res = await fetch(`/api/projects/${project.id}/replace-panoramas`, {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || 'Nie udało się zastąpić panoram');
+      }
+
+      toast.success(
+        data.message ?? 'Zastąpione panoramy trafiły do poczekalni'
+      );
+      setReplaceMessage(
+        data.message ?? 'Nowe panoramy przesłano, stare są w poczekalni'
+      );
+      setReplaceFiles({});
+      fetchConfig();
+    } catch (error) {
+      setReplaceError(
+        error instanceof Error ? error.message : 'Nie udało się zastąpić panoram'
+      );
+    } finally {
+      setIsReplacing(false);
+    }
+  }, [project.id, replaceCount, replaceFiles, fetchConfig]);
 
   return (
     <div>
@@ -244,6 +336,104 @@ export function ProjectEditForm({
               </Link>
             </div>
           </form>
+          </CardContent>
+        </Card>
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Wymiana panoram</CardTitle>
+          <CardAction>
+            <span className="text-xs text-muted-foreground">Poczekalnia:</span>
+          </CardAction>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-xs text-muted-foreground">
+            Wybierz nowe pliki dla konkretnych panoram, aby przekierować stare
+            wersje do{' '}
+            <span className="font-mono text-[11px]">{pendingDir}</span> – edytor
+            może je usunąć ręcznie po testach.
+          </p>
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>Wybrane pliki: {replaceCount}</span>
+            <span>Panoram: {config?.panoramas.length ?? 0}</span>
+          </div>
+          {replaceMessage && (
+            <p className="text-xs text-green-600">{replaceMessage}</p>
+          )}
+          {replaceError && (
+            <p className="text-xs text-destructive">{replaceError}</p>
+          )}
+          {configError && (
+            <p className="text-xs text-destructive">{configError}</p>
+          )}
+          {isConfigLoading ? (
+            <p className="text-xs text-muted-foreground flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Ładowanie panoram…
+            </p>
+          ) : config ? (
+            <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
+              {config.panoramas.map((pano, idx) => {
+                const inputId = `replace-${pano.id}`;
+                return (
+                  <div
+                    key={pano.id}
+                    className="rounded-lg border border-muted/50 px-3 py-2 space-y-1 text-xs"
+                  >
+                    <div className="flex items-center justify-between text-muted-foreground text-[11px]">
+                      <span>
+                        #{String(idx + 1).padStart(2, '0')} – {pano.name || pano.id}
+                      </span>
+                      <span className="truncate max-w-[120px]">{pano.file}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        id={inputId}
+                        type="file"
+                        className="hidden"
+                        accept="image/webp,image/jpeg,image/png"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0] ?? null;
+                          handleReplaceFile(pano.id, file);
+                          event.target.value = '';
+                        }}
+                      />
+                      <label htmlFor={inputId}>
+                        <Button variant="outline" size="xs">
+                          Wybierz plik
+                        </Button>
+                      </label>
+                      <span className="text-[11px] text-muted-foreground truncate max-w-[140px]">
+                        {replaceFiles[pano.id]?.name ?? 'Brak pliku'}
+                      </span>
+                      {replaceFiles[pano.id] && (
+                        <Button
+                          variant="ghost"
+                          size="icon-xs"
+                          onClick={() => handleReplaceFile(pano.id, null)}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Nie udało się załadować listy panoram.
+            </p>
+          )}
+          <Button
+            className="w-full"
+            disabled={replaceCount === 0 || isReplacing}
+            onClick={handleReplaceSubmit}
+          >
+            {isReplacing && (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            )}
+            Zastąp panoramy ({replaceCount})
+          </Button>
         </CardContent>
       </Card>
     </div>

@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Project } from '@/types';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { Panorama, Project } from '@/types';
 import {
   Card,
   CardContent,
@@ -21,6 +22,15 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import {
   Eye,
   Pencil,
   Crosshair,
@@ -28,6 +38,9 @@ import {
   Trash2,
   Image as ImageIcon,
   Download,
+  Copy,
+  Repeat,
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -105,6 +118,94 @@ export function ProjectCard({
   const router = useRouter();
   const config = sizeConfig[size];
   const groups = groupsProp ?? [];
+  const [replaceDialogOpen, setReplaceDialogOpen] = useState(false);
+  const [panoramasForReplace, setPanoramasForReplace] = useState<Panorama[] | null>(null);
+  const [isLoadingPanoramas, setIsLoadingPanoramas] = useState(false);
+  const [replaceFiles, setReplaceFiles] = useState<Record<string, File | null>>({});
+  const [replaceError, setReplaceError] = useState<string | null>(null);
+  const [isReplacingPanoramas, setIsReplacingPanoramas] = useState(false);
+  const selectedFileCount = useMemo(
+    () => Object.values(replaceFiles).filter(Boolean).length,
+    [replaceFiles]
+  );
+
+  useEffect(() => {
+    let isActive = true;
+    if (!replaceDialogOpen) {
+      setPanoramasForReplace(null);
+      setReplaceFiles({});
+      setReplaceError(null);
+      setIsLoadingPanoramas(false);
+      return;
+    }
+
+    setIsLoadingPanoramas(true);
+    setReplaceError(null);
+    fetch(`/api/projects/${project.id}/config`)
+      .then(async (res) => {
+        if (!res.ok) {
+          throw new Error('Nie udało się pobrać panoram');
+        }
+        const data = await res.json();
+        if (!isActive) return;
+        setPanoramasForReplace(data.panoramas ?? []);
+        setReplaceFiles({});
+      })
+      .catch((err) => {
+        if (!isActive) return;
+        setReplaceError(
+          err instanceof Error ? err.message : 'Nie udało się pobrać panoram'
+        );
+      })
+      .finally(() => {
+        if (!isActive) return;
+        setIsLoadingPanoramas(false);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [replaceDialogOpen, project.id]);
+
+  const handleFileInput = useCallback((panoramaId: string, file: File | null) => {
+    setReplaceFiles((prev) => ({ ...prev, [panoramaId]: file }));
+  }, []);
+
+  const handleReplaceSubmit = useCallback(async () => {
+    if (selectedFileCount === 0) return;
+    setIsReplacingPanoramas(true);
+    setReplaceError(null);
+
+    const formData = new FormData();
+    for (const [panoramaId, file] of Object.entries(replaceFiles)) {
+      if (file) {
+        formData.append(`panorama:${panoramaId}`, file);
+      }
+    }
+
+    try {
+      const res = await fetch(`/api/projects/${project.id}/replace-panoramas`, {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || 'Nie udało się zastąpić panoram');
+      }
+
+      toast.success(
+        data.message ?? 'Panoramy zostały zastąpione i trafiły do poczekalni'
+      );
+      setReplaceDialogOpen(false);
+      router.refresh();
+    } catch (err) {
+      setReplaceError(
+        err instanceof Error ? err.message : 'Nie udało się zastąpić panoram'
+      );
+    } finally {
+      setIsReplacingPanoramas(false);
+    }
+  }, [project.id, replaceFiles, router, selectedFileCount]);
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -140,6 +241,28 @@ export function ProjectCard({
     );
     toast.success(`Pobieranie „${project.name}"…`);
   };
+
+  const handleClone = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(`/api/projects/${project.id}/clone`, {
+        method: 'POST',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || 'Błąd klonowania projektu');
+      }
+      toast.success(
+        data.message ?? `Projekt „${project.name}" został sklonowany.`
+      );
+      router.refresh();
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : 'Nie udało się sklonować projektu'
+      );
+    }
+  };
+  const openReplaceDialog = () => setReplaceDialogOpen(true);
 
   return (
     <Card className="overflow-hidden pt-0 gap-0">
@@ -255,6 +378,20 @@ export function ProjectCard({
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
+                disabled={disableDownload}
+                onClick={disableDownload ? undefined : handleClone}
+              >
+                <Copy className="h-4 w-4 mr-2" />
+                Klonuj projekt
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled={disableDownload}
+                onClick={disableDownload ? undefined : openReplaceDialog}
+              >
+                <Repeat className="h-4 w-4 mr-2" />
+                Zastąp panoramy
+              </DropdownMenuItem>
+              <DropdownMenuItem
                 className="text-red-600"
                 disabled={disableDownload}
                 onClick={disableDownload ? undefined : handleDelete}
@@ -297,6 +434,113 @@ export function ProjectCard({
           </p>
         )}
       </CardContent>
+      <Dialog open={replaceDialogOpen} onOpenChange={setReplaceDialogOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Zastąp panoramy</DialogTitle>
+            <DialogDescription>
+              Wybierz dla każdego punktu widokowego nowy plik (np. ten plik zastąpi
+              panoramę #00 lub #01). Zastąpione materiały trafią do{' '}
+              <span className="font-mono">
+                /uploads/projects/{project.id}/pending-panoramas
+              </span>{' '}
+              (poczekalnia). Po zakończonych testach edytor może je usunąć ręcznie.
+            </DialogDescription>
+          </DialogHeader>
+          {replaceError && (
+            <p className="text-sm text-destructive my-2">{replaceError}</p>
+          )}
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>Wybrane pliki: {selectedFileCount}</span>
+            {panoramasForReplace && panoramasForReplace.length > 0 && (
+              <span>Liczba panoram: {panoramasForReplace.length}</span>
+            )}
+          </div>
+          {isLoadingPanoramas ? (
+            <p className="text-sm text-muted-foreground mt-3">
+              Ładowanie panoram…
+            </p>
+          ) : (
+            <div className="mt-3 space-y-3 max-h-[320px] overflow-y-auto pr-1">
+              {panoramasForReplace && panoramasForReplace.length > 0 ? (
+                panoramasForReplace.map((pano, idx) => {
+                  const inputId = `replace-panorama-${project.id}-${pano.id}`;
+                  return (
+                    <div
+                      key={pano.id}
+                      className="rounded-lg border border-muted/50 px-3 py-2 space-y-1"
+                    >
+                      <div className="flex items-center justify-between text-sm font-semibold">
+                        <Label className="text-sm font-semibold">
+                          Panorama #{String(idx + 1).padStart(2, '0')} –{' '}
+                          {pano.name || pano.id}
+                        </Label>
+                        <span className="text-[11px] text-muted-foreground">
+                          {pano.file}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        ID: {pano.id}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <input
+                          id={inputId}
+                          type="file"
+                          className="hidden"
+                          accept="image/webp,image/jpeg,image/png"
+                          onChange={(event) => {
+                            const file =
+                              event.target.files?.[0] ?? null;
+                            handleFileInput(pano.id, file);
+                            event.target.value = '';
+                          }}
+                        />
+                        <label htmlFor={inputId}>
+                          <Button variant="outline" size="sm">
+                            Wybierz plik
+                          </Button>
+                        </label>
+                        <span className="text-xs text-muted-foreground truncate max-w-[180px]">
+                          {replaceFiles[pano.id]?.name ?? 'Brak nowego pliku'}
+                        </span>
+                        {replaceFiles[pano.id] && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleFileInput(pano.id, null)}
+                            className="text-muted-foreground hover:text-foreground"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Brak zapisanych panoram
+                </p>
+              )}
+            </div>
+          )}
+          <DialogFooter className="mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setReplaceDialogOpen(false)}
+              disabled={isReplacingPanoramas}
+            >
+              Anuluj
+            </Button>
+            <Button
+              onClick={handleReplaceSubmit}
+              disabled={selectedFileCount === 0 || isReplacingPanoramas}
+            >
+              {isReplacingPanoramas ? 'Aktualizuję…' : 'Zastąp panoramy'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
