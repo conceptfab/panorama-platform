@@ -25,7 +25,6 @@ import {
   RotateCw,
   Camera,
   Maximize,
-  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { generateId } from '@/utils/helpers';
@@ -67,16 +66,6 @@ export function HotspotEditor({
     width: number;
     height: number;
   } | null>(null);
-  const [replaceFiles, setReplaceFiles] = useState<Record<string, File | null>>(
-    {}
-  );
-  const [replaceError, setReplaceError] = useState<string | null>(null);
-  const [replaceMessage, setReplaceMessage] = useState<string | null>(null);
-  const [isReplacingPanoramas, setIsReplacingPanoramas] = useState(false);
-  const replaceCount = useMemo(
-    () => Object.values(replaceFiles).filter(Boolean).length,
-    [replaceFiles]
-  );
   const [showOptimizationInfo, setShowOptimizationInfo] = useState(false);
   const shownStartupOptimizationInfoRef = useRef(false);
   const [isAddingMode, setIsAddingMode] = useState(false);
@@ -144,27 +133,28 @@ export function HotspotEditor({
     return texture;
   }, []);
 
-  // Tekstura znacznika istniejącego hotspota (cyjan, żeby odróżnić od czerwonego „nowego”)
-  const createExistingHotspotTexture = useCallback(() => {
+  // Tekstura znacznika istniejącego hotspota (cyjan normalnie, pomarańczowy gdy zaznaczony)
+  const createExistingHotspotTexture = useCallback((isSelected: boolean) => {
     const canvas = document.createElement('canvas');
     canvas.width = 64;
     canvas.height = 64;
     const ctx = canvas.getContext('2d')!;
+    const color = isSelected ? '#f59e0b' : '#22d3ee';
     ctx.beginPath();
     ctx.arc(32, 32, 26, 0, Math.PI * 2);
-    ctx.strokeStyle = '#22d3ee';
+    ctx.strokeStyle = color;
     ctx.lineWidth = 4;
     ctx.stroke();
     ctx.beginPath();
     ctx.arc(32, 32, 10, 0, Math.PI * 2);
-    ctx.fillStyle = '#22d3ee';
+    ctx.fillStyle = color;
     ctx.fill();
     return new window.THREE.CanvasTexture(canvas);
   }, []);
 
   // Etykieta hotspotu wyświetlana nad markerem w widoku sceny.
   const createHotspotLabelTexture = useCallback(
-    (text: string, isLink: boolean) => {
+    (text: string, isLink: boolean, isSelected: boolean) => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d')!;
 
@@ -191,10 +181,12 @@ export function HotspotEditor({
       ctx.lineTo(0, radius);
       ctx.quadraticCurveTo(0, 0, radius, 0);
       ctx.closePath();
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.70)';
+      ctx.fillStyle = isSelected ? 'rgba(217, 119, 6, 0.85)' : 'rgba(0, 0, 0, 0.70)';
       ctx.fill();
       ctx.lineWidth = 4;
-      ctx.strokeStyle = isLink ? 'rgba(34, 211, 238, 0.95)' : 'rgba(245, 158, 11, 0.95)';
+      ctx.strokeStyle = isSelected 
+        ? 'rgba(255, 255, 255, 0.95)' 
+        : (isLink ? 'rgba(34, 211, 238, 0.95)' : 'rgba(245, 158, 11, 0.95)');
       ctx.stroke();
 
       ctx.font = font;
@@ -221,13 +213,13 @@ export function HotspotEditor({
         sprite.material?.dispose?.();
       }
       hotspotMarkersRef.current = [];
-      const tex = existingHotspotTextureRef.current as {
-        dispose?: () => void;
-      } | null;
-      if (tex?.dispose) {
-        tex.dispose();
-        existingHotspotTextureRef.current = null;
+      const tex = existingHotspotTextureRef.current;
+      if (Array.isArray(tex)) {
+        tex.forEach(t => t.dispose?.());
+      } else if (tex && typeof tex === 'object' && 'dispose' in tex) {
+        (tex as { dispose: () => void }).dispose();
       }
+      existingHotspotTextureRef.current = null;
     },
     []
   );
@@ -237,8 +229,11 @@ export function HotspotEditor({
     (viewer: { scene: { add: (o: unknown) => void } }, hotspots: Hotspot[]) => {
       if (!hotspots?.length || !window.THREE) return;
       const THREE = window.THREE;
-      const texture = createExistingHotspotTexture();
-      existingHotspotTextureRef.current = texture;
+      
+      const textureStandard = createExistingHotspotTexture(false);
+      const textureSelected = createExistingHotspotTexture(true);
+      
+      existingHotspotTextureRef.current = [textureStandard, textureSelected];
       const panoramas = configRef.current.panoramas;
       const panoramaNameById = new Map(
         panoramas.map((p, idx) => [p.id, `#${idx + 1} - ${p.name}`])
@@ -248,10 +243,14 @@ export function HotspotEditor({
         const markerY = hp.position.y;
         const markerZ = hp.position.z;
 
+        const isSelected = hp.id === selectedHotspotId;
+        const texture = isSelected ? textureSelected : textureStandard;
+
         const mat = new THREE.SpriteMaterial({
           map: texture,
           depthTest: false,
           transparent: true,
+          opacity: isSelected ? 1.0 : 0.8,
         });
         const sprite = new THREE.Sprite(mat);
         sprite.scale.set(250, 250, 1);
@@ -271,7 +270,8 @@ export function HotspotEditor({
 
         const { texture: labelTexture, aspect } = createHotspotLabelTexture(
           labelText,
-          hp.type === 'link'
+          hp.type === 'link',
+          isSelected
         );
         const labelMat = new THREE.SpriteMaterial({
           map: labelTexture,
@@ -299,7 +299,7 @@ export function HotspotEditor({
         hotspotMarkersRef.current.push(labelSprite);
       }
     },
-    [createExistingHotspotTexture, createHotspotLabelTexture]
+    [createExistingHotspotTexture, createHotspotLabelTexture, selectedHotspotId]
   );
 
   // Load single panorama
@@ -490,7 +490,7 @@ export function HotspotEditor({
     if (!pano) return;
     clearHotspotMarkers(viewerWithScene);
     addHotspotMarkers(viewerWithScene, pano.hotspots ?? []);
-  }, [config, clearHotspotMarkers, addHotspotMarkers]);
+  }, [config, clearHotspotMarkers, addHotspotMarkers, selectedHotspotId]);
 
   useEffect(() => {
     return () => {
@@ -514,64 +514,6 @@ export function HotspotEditor({
     loadPanorama(index);
   };
 
-  const handleReplaceFile = useCallback((panoramaId: string, file: File | null) => {
-    setReplaceFiles((prev) => ({ ...prev, [panoramaId]: file }));
-    setReplaceError(null);
-    setReplaceMessage(null);
-  }, []);
-
-  const handleReplaceSubmit = useCallback(async () => {
-    if (replaceCount === 0) {
-      setReplaceError('Wybierz przynajmniej jeden plik');
-      return;
-    }
-
-    setIsReplacingPanoramas(true);
-    setReplaceError(null);
-    setReplaceMessage(null);
-
-    const formData = new FormData();
-    for (const [panoramaId, file] of Object.entries(replaceFiles)) {
-      if (file) {
-        formData.append(`panorama:${panoramaId}`, file);
-      }
-    }
-
-    try {
-      const res = await fetch(
-        `/api/projects/${projectId}/replace-panoramas`,
-        {
-          method: 'POST',
-          body: formData,
-        }
-      );
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(data.error || 'Nie udało się zastąpić panoram');
-      }
-
-      toast.success(
-        data.message ??
-          'Wybrane panoramy zostały zastąpione i trafiły do poczekalni'
-      );
-      setReplaceMessage(
-        data.message ?? 'Wybrane panoramy przeniesiono do poczekalni'
-      );
-      setReplaceFiles({});
-
-      const reloadRes = await fetch(`/api/projects/${projectId}/config`);
-      if (reloadRes.ok) {
-        const refreshed = await reloadRes.json();
-        setConfig(refreshed);
-      }
-    } catch (err) {
-      setReplaceError(
-        err instanceof Error ? err.message : 'Nie udało się zastąpić panoram'
-      );
-    } finally {
-      setIsReplacingPanoramas(false);
-    }
-  }, [projectId, replaceFiles, replaceCount]);
 
   const handleAddHotspot = () => {
     if (!clickedPosition) {
@@ -784,66 +726,68 @@ export function HotspotEditor({
           )}
 
           {/* Top bar */}
-          <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
-            <div className="flex items-center gap-4">
+          <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
               <Link href={`/admin/projects/${projectId}`}>
-                <Button variant="secondary" size="sm">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
+                <Button variant="secondary" size="xs" className="h-7 text-[10px] px-2">
+                  <ArrowLeft className="h-3 w-3 mr-1" />
                   Powrót
                 </Button>
               </Link>
-              <span className="text-white font-medium">{projectName}</span>
+              <span className="text-white font-medium text-xs">{projectName}</span>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <Button
                 variant="secondary"
-                size="icon"
-                onClick={toggleAutoRotate}
-                className={
+                size="icon-xs"
+                className={`h-7 w-7 ${
                   autoRotate
                     ? 'bg-primary text-primary-foreground hover:bg-primary/90'
                     : ''
-                }
+                }`}
+                onClick={toggleAutoRotate}
                 title="Auto-rotacja"
               >
-                <RotateCw className="h-4 w-4" />
+                <RotateCw className="h-3.5 w-3.5" />
               </Button>
               <Button
                 variant="secondary"
-                size="icon"
+                size="icon-xs"
+                className="h-7 w-7"
                 onClick={takeScreenshot}
                 title="Screenshot"
               >
-                <Camera className="h-4 w-4" />
+                <Camera className="h-3.5 w-3.5" />
               </Button>
               <Button
                 variant="secondary"
-                size="icon"
+                size="icon-xs"
+                className="h-7 w-7"
                 onClick={toggleFullscreen}
                 title="Pełny ekran"
               >
-                <Maximize className="h-4 w-4" />
+                <Maximize className="h-3.5 w-3.5" />
               </Button>
             </div>
           </div>
 
           {/* Coordinates display */}
           {isAddingMode && clickedPosition && (
-            <div className="absolute bottom-4 left-4 bg-black/70 text-white px-4 py-2 rounded-lg flex items-center gap-3">
-              <span className="font-mono">
+            <div className="absolute bottom-3 left-3 bg-black/70 text-white px-2.5 py-1.5 rounded-md flex items-center gap-2">
+              <span className="font-mono text-[10px]">
                 {clickedPosition.x}, {clickedPosition.y}, {clickedPosition.z}
               </span>
-              <Button variant="ghost" size="sm" onClick={copyCoordinates}>
-                <Copy className="h-4 w-4" />
+              <Button variant="ghost" size="icon-xs" className="h-5 w-5" onClick={copyCoordinates}>
+                <Copy className="h-3 w-3" />
               </Button>
             </div>
           )}
 
           {/* Adding mode indicator */}
           {isAddingMode && (
-            <div className="absolute bottom-4 right-4 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium">
-              Tryb dodawania hotspota
+            <div className="absolute bottom-3 right-3 bg-primary text-primary-foreground px-3 py-1 rounded-md text-[10px] font-medium">
+              Tryb dodawania
             </div>
           )}
 
@@ -859,24 +803,24 @@ export function HotspotEditor({
         </div>
 
         {/* Side panel */}
-        <div className="w-80 bg-white dark:bg-zinc-950 border-l flex flex-col">
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="w-72 bg-white dark:bg-zinc-950 border-l flex flex-col">
+          <div className="flex-1 overflow-y-auto p-3.5 space-y-3.5 scrollbar-hide">
             {/* Panorama selector */}
             <Card>
-              <CardHeader className="p-4 pb-2">
-                <CardTitle className="text-sm">Panorama</CardTitle>
+              <CardHeader className="p-3.5 pb-2">
+                <CardTitle className="text-xs font-semibold">Panorama</CardTitle>
               </CardHeader>
-              <CardContent className="p-4 pt-2">
+              <CardContent className="p-3.5 pt-0">
                 <Select
                   value={String(currentPanoramaIndex)}
                   onValueChange={(v) => handlePanoramaChange(Number(v))}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="h-9 text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     {config.panoramas.map((p, i) => (
-                      <SelectItem key={p.id} value={String(i)}>
+                      <SelectItem key={p.id} value={String(i)} className="text-xs">
                         #{i + 1} - {p.name}
                       </SelectItem>
                     ))}
@@ -885,141 +829,54 @@ export function HotspotEditor({
               </CardContent>
             </Card>
 
-            {/* Panorama replacement */}
-            <Card>
-              <CardHeader className="p-4 pb-2">
-                <CardTitle className="text-sm">Wymiana panoram</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-2 space-y-3">
-                <p className="text-xs text-muted-foreground">
-                  Wybierz nowe zdjęcia dla wybranych panoram. Zastąpione
-                  materiały trafią do{' '}
-                  <span className="font-mono text-[11px]">
-                    /uploads/projects/{projectId}/pending-panoramas
-                  </span>{' '}
-                  (poczekalnia). Możesz je usunąć ręcznie po weryfikacji.
-                </p>
-                {replaceMessage && (
-                  <p className="text-xs text-green-600">{replaceMessage}</p>
-                )}
-                {replaceError && (
-                  <p className="text-xs text-destructive">{replaceError}</p>
-                )}
-                <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
-                  {config.panoramas.map((pano, idx) => {
-                    const inputId = `replace-${pano.id}`;
-                    return (
-                      <div
-                        key={pano.id}
-                        className="rounded-lg border border-muted/50 px-3 py-2 space-y-1"
-                      >
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
-                          <span>
-                            #{String(idx + 1).padStart(2, '0')} –{' '}
-                            {pano.name || pano.id}
-                          </span>
-                          <span className="truncate max-w-[90px]">
-                            {pano.file}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <input
-                            id={inputId}
-                            type="file"
-                            className="hidden"
-                            accept="image/webp,image/jpeg,image/png"
-                            onChange={(event) => {
-                              const file = event.target.files?.[0] ?? null;
-                              handleReplaceFile(pano.id, file);
-                              event.target.value = '';
-                            }}
-                          />
-                          <label htmlFor={inputId}>
-                            <Button variant="outline" size="xs">
-                              Wybierz plik
-                            </Button>
-                          </label>
-                          <span className="text-xs text-muted-foreground truncate max-w-[120px]">
-                            {replaceFiles[pano.id]?.name ?? 'Brak pliku'}
-                          </span>
-                          {replaceFiles[pano.id] && (
-                            <Button
-                              variant="ghost"
-                              size="icon-xs"
-                              onClick={() => handleReplaceFile(pano.id, null)}
-                              className="px-0"
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                <Button
-                  className="w-full"
-                  disabled={replaceCount === 0 || isReplacingPanoramas}
-                  onClick={handleReplaceSubmit}
-                >
-                  {isReplacingPanoramas && (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  )}
-                  Zastąp panoramy ({replaceCount})
-                </Button>
-              </CardContent>
-            </Card>
 
             {/* Add hotspot */}
             <Card className={isAddingMode ? 'ring-2 ring-primary' : ''}>
-              <CardHeader className="p-4 pb-2">
-                <CardTitle className="text-sm flex items-center gap-2">
+              <CardHeader className="p-3.5 pb-2">
+                <CardTitle className="text-xs font-semibold flex items-center gap-1.5">
                   Dodaj hotspot
                   {isAddingMode && (
-                    <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded">
+                    <span className="text-[10px] bg-primary text-primary-foreground px-1.5 py-0.5 rounded">
                       Aktywny
                     </span>
                   )}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-4 pt-2 space-y-3">
+              <CardContent className="p-3.5 pt-0 space-y-2.5">
                 <Button
-                  className="w-full"
+                  className="w-full h-9 text-xs"
                   variant={isAddingMode ? 'default' : 'outline'}
                   onClick={toggleAddingMode}
+                  size="sm"
                 >
                   {isAddingMode ? (
                     <>
-                      <Copy className="h-4 w-4 mr-2" />
-                      Anuluj wybieranie
+                      <Copy className="h-3.5 w-3.5 mr-1.5" />
+                      Anuluj
                     </>
                   ) : (
                     <>
-                      <Plus className="h-4 w-4 mr-2" />
+                      <Plus className="h-3.5 w-3.5 mr-1.5" />
                       Wybierz pozycję
                     </>
                   )}
                 </Button>
 
                 {isAddingMode && clickedPosition && (
-                  <div className="space-y-2">
-                    <p className="text-xs text-muted-foreground">
-                      Wybrana pozycja:{' '}
-                      <span className="font-mono">
-                        {clickedPosition.x}, {clickedPosition.y},{' '}
-                        {clickedPosition.z}
-                      </span>
+                  <div className="space-y-1.5 text-center">
+                    <p className="text-[10px] text-muted-foreground">
+                      Poz: <span className="font-mono">{clickedPosition.x},{clickedPosition.y},{clickedPosition.z}</span>
                     </p>
-                    <Button className="w-full" onClick={handleAddHotspot}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Dodaj hotspot tutaj
+                    <Button className="w-full h-8 text-xs" onClick={handleAddHotspot} size="sm">
+                      <Plus className="h-3.5 w-3.5 mr-1.5" />
+                      Dodaj tutaj
                     </Button>
                   </div>
                 )}
 
                 {isAddingMode && !clickedPosition && (
-                  <p className="text-xs text-muted-foreground text-center">
-                    Kliknij w panoramę, aby wybrać pozycję
+                  <p className="text-[10px] text-muted-foreground text-center">
+                    Kliknij w panoramę
                   </p>
                 )}
               </CardContent>
@@ -1027,16 +884,16 @@ export function HotspotEditor({
 
             {/* Hotspot list */}
             <Card>
-              <CardHeader className="p-4 pb-2">
-                <CardTitle className="text-sm">
+              <CardHeader className="p-3.5 pb-2">
+                <CardTitle className="text-xs font-semibold">
                   Hotspoty ({currentPanorama?.hotspots.length || 0})
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-4 pt-2 space-y-2">
+              <CardContent className="p-3.5 pt-0 space-y-2">
                 {currentPanorama?.hotspots.map((hotspot) => (
                   <div
                     key={hotspot.id}
-                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                    className={`p-2.5 rounded-md border cursor-pointer transition-colors ${
                       selectedHotspotId === hotspot.id
                         ? 'border-primary bg-primary/5'
                         : 'hover:bg-muted/50'
@@ -1044,13 +901,13 @@ export function HotspotEditor({
                     onClick={() => setSelectedHotspotId(hotspot.id)}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium truncate">
+                      <span className="text-xs font-medium truncate">
                         {hotspot.title}
                       </span>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6"
+                        className="h-5 w-5"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleDeleteHotspot(hotspot.id);
@@ -1059,7 +916,7 @@ export function HotspotEditor({
                         <Trash2 className="h-3 w-3" />
                       </Button>
                     </div>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-[10px] text-muted-foreground leading-none">
                       {hotspot.type === 'link' ? 'Link' : 'Info'}
                     </p>
                   </div>
@@ -1067,7 +924,7 @@ export function HotspotEditor({
 
                 {(!currentPanorama ||
                   currentPanorama.hotspots.length === 0) && (
-                  <p className="text-xs text-muted-foreground text-center py-4">
+                  <p className="text-[10px] text-muted-foreground text-center py-2">
                     Brak hotspotów
                   </p>
                 )}
@@ -1077,13 +934,14 @@ export function HotspotEditor({
             {/* Hotspot editor */}
             {selectedHotspot && (
               <Card>
-                <CardHeader className="p-4 pb-2">
-                  <CardTitle className="text-sm">Edycja hotspotu</CardTitle>
+                <CardHeader className="p-3.5 pb-2">
+                  <CardTitle className="text-xs font-semibold">Edycja hotspotu</CardTitle>
                 </CardHeader>
-                <CardContent className="p-4 pt-2 space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs">Tytuł</Label>
+                <CardContent className="p-3.5 pt-0 space-y-3.5">
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] uppercase font-bold text-muted-foreground/70">Tytuł</Label>
                     <Input
+                      className="h-9 text-xs"
                       value={selectedHotspot.title}
                       onChange={(e) =>
                         handleUpdateHotspot(selectedHotspot.id, {
@@ -1093,8 +951,8 @@ export function HotspotEditor({
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label className="text-xs">Typ</Label>
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] uppercase font-bold text-muted-foreground/70">Typ</Label>
                     <Select
                       value={selectedHotspot.type}
                       onValueChange={(v) =>
@@ -1103,31 +961,31 @@ export function HotspotEditor({
                         })
                       }
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="h-9 text-xs">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="link">Link</SelectItem>
-                        <SelectItem value="info">Info</SelectItem>
+                        <SelectItem value="link" className="text-xs">Link</SelectItem>
+                        <SelectItem value="info" className="text-xs">Info</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   {selectedHotspot.type === 'link' && (
-                    <div className="space-y-2">
-                      <Label className="text-xs">Cel (panorama)</Label>
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] uppercase font-bold text-muted-foreground/70">Cel</Label>
                       <Select
                         value={selectedHotspot.target}
                         onValueChange={(v) =>
                           handleUpdateHotspot(selectedHotspot.id, { target: v })
                         }
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="h-9 text-xs">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
                           {config.panoramas.map((p) => (
-                            <SelectItem key={p.id} value={p.id}>
+                            <SelectItem key={p.id} value={p.id} className="text-xs">
                               {p.name}
                             </SelectItem>
                           ))}
@@ -1136,10 +994,11 @@ export function HotspotEditor({
                     </div>
                   )}
 
-                  <div className="space-y-2">
-                    <Label className="text-xs">Pozycja</Label>
-                    <div className="grid grid-cols-3 gap-2">
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] uppercase font-bold text-muted-foreground/70">Pozycja</Label>
+                    <div className="grid grid-cols-3 gap-1">
                       <Input
+                        className="h-7 text-xs px-1 text-center"
                         type="number"
                         value={selectedHotspot.position.x}
                         onChange={(e) =>
@@ -1150,9 +1009,9 @@ export function HotspotEditor({
                             },
                           })
                         }
-                        placeholder="X"
                       />
                       <Input
+                        className="h-7 text-xs px-1 text-center"
                         type="number"
                         value={selectedHotspot.position.y}
                         onChange={(e) =>
@@ -1163,9 +1022,9 @@ export function HotspotEditor({
                             },
                           })
                         }
-                        placeholder="Y"
                       />
                       <Input
+                        className="h-7 text-xs px-1 text-center"
                         type="number"
                         value={selectedHotspot.position.z}
                         onChange={(e) =>
@@ -1176,13 +1035,12 @@ export function HotspotEditor({
                             },
                           })
                         }
-                        placeholder="Z"
                       />
                     </div>
                     <Button
                       variant="outline"
-                      size="sm"
-                      className="w-full"
+                      size="xs"
+                      className="w-full text-[10px] h-7"
                       onClick={() => {
                         if (clickedPosition) {
                           handleUpdateHotspot(selectedHotspot.id, {
@@ -1193,7 +1051,7 @@ export function HotspotEditor({
                       }}
                       disabled={!clickedPosition}
                     >
-                      Użyj klikniętej pozycji
+                      Użyj klikniętej
                     </Button>
                   </div>
                 </CardContent>
@@ -1202,8 +1060,8 @@ export function HotspotEditor({
           </div>
 
           {/* Save button at bottom */}
-          <div className="p-4 border-t bg-white dark:bg-zinc-950">
-            <Button className="w-full" onClick={handleSave} disabled={isSaving}>
+          <div className="p-3.5 border-t bg-white dark:bg-zinc-950">
+            <Button className="w-full h-10 text-xs" onClick={handleSave} disabled={isSaving} size="sm">
               {isSaving ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : (
