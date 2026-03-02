@@ -397,11 +397,11 @@ const handleSubmit = async (e: React.FormEvent) => {
                           event.target.value = '';
                         }}
                       />
-                      <label htmlFor={inputId}>
-                        <Button variant="outline" size="xs">
+                      <Button variant="outline" size="xs" asChild>
+                        <label htmlFor={inputId} className="cursor-pointer">
                           Wybierz plik
-                        </Button>
-                      </label>
+                        </label>
+                      </Button>
                       <span className="text-[11px] text-muted-foreground truncate max-w-[140px]">
                         {replaceFiles[pano.id]?.name ?? 'Brak pliku'}
                       </span>
