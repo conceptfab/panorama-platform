@@ -170,91 +170,94 @@ export function PanoViewer({
       panoramas[index] = panorama;
     });
 
-    // Link panoramas
-    panoramas.forEach((pano) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const panoAny = pano as any;
-      const pendingLinks = panoAny._pendingLinks;
-      if (pendingLinks) {
-        pendingLinks.forEach(
-          (link: {
-            targetIndex: number;
-            position: { x: number; y: number; z: number };
-            icon: string;
-          }) => {
-            const targetPano = panoramas[link.targetIndex];
-            panoAny.link(
-              targetPano,
-              new THREE.Vector3(
-                link.position.x,
-                link.position.y,
-                link.position.z,
-              ),
-              360,
-              link.icon,
-            );
-          },
-        );
-      }
-    });
-
-    // Preload images
-    config.panoramas.forEach((_, index) => {
-      const img = new Image();
-      img.onload = () => {
-        loadedCount++;
-        setLoadProgress((loadedCount / config.panoramas.length) * 100);
-        if (
-          config.settings.optimizePanoramaForScreen &&
-          !resolvedSizes[index] &&
-          img.naturalWidth > 0 &&
-          img.naturalHeight > 0
-        ) {
-          resolvedSizes[index] = {
-            width: img.naturalWidth,
-            height: img.naturalHeight,
-          };
-          setOptimizedSizesByPanorama((prev) => {
-            const next = [...prev];
-            next[index] = resolvedSizes[index];
-            return next;
-          });
-        }
-      };
-      img.onerror = () => {
-        loadedCount++;
-        setLoadProgress((loadedCount / config.panoramas.length) * 100);
-      };
-      img.src = `${basePath}/panoramas/${selectedFiles[index]}`;
-    });
-
-    panoramasRef.current = panoramas;
-    setOptimizedSizesByPanorama(resolvedSizes);
-
-    // Add all panoramas to viewer
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    panoramas.forEach((p) => (viewer as any).add(p));
-    if (panoramas.length > 0) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (viewer as any).setPanorama(panoramas[0]);
-    }
-
-    // Start auto-rotate after delay: losowa prędkość 0.2–0.5, losowy kierunek, po pełnym obrocie losowa panorama
-    if (config.settings.autoRotate) {
-      setTimeout(() => {
-        if (viewer.OrbitControls) {
-          viewer.enableAutoRate();
-          applyRandomAutoRotate(viewer);
-          scheduleNextRotation();
-          setAutoRotate(true);
-        }
-      }, config.settings.autoRotateDelay);
-    }
-
-    // Splash screen fade
+    // Render loop and heavy lifting delayed to allow splash screen to render
     setTimeout(() => {
-      setIsLoading(false);
-    }, config.settings.splashDuration);
+      // Link panoramas
+      panoramas.forEach((pano) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const panoAny = pano as any;
+        const pendingLinks = panoAny._pendingLinks;
+        if (pendingLinks) {
+          pendingLinks.forEach(
+            (link: {
+              targetIndex: number;
+              position: { x: number; y: number; z: number };
+              icon: string;
+            }) => {
+              const targetPano = panoramas[link.targetIndex];
+              panoAny.link(
+                targetPano,
+                new THREE.Vector3(
+                  link.position.x,
+                  link.position.y,
+                  link.position.z,
+                ),
+                360,
+                link.icon,
+              );
+            },
+          );
+        }
+      });
+
+      // Preload images
+      config.panoramas.forEach((_, index) => {
+        const img = new Image();
+        img.onload = () => {
+          loadedCount++;
+          setLoadProgress((loadedCount / config.panoramas.length) * 100);
+          if (
+            config.settings.optimizePanoramaForScreen &&
+            !resolvedSizes[index] &&
+            img.naturalWidth > 0 &&
+            img.naturalHeight > 0
+          ) {
+            resolvedSizes[index] = {
+              width: img.naturalWidth,
+              height: img.naturalHeight,
+            };
+            setOptimizedSizesByPanorama((prev) => {
+              const next = [...prev];
+              next[index] = resolvedSizes[index];
+              return next;
+            });
+          }
+        };
+        img.onerror = () => {
+          loadedCount++;
+          setLoadProgress((loadedCount / config.panoramas.length) * 100);
+        };
+        img.src = `${basePath}/panoramas/${selectedFiles[index]}`;
+      });
+
+      panoramasRef.current = panoramas;
+      setOptimizedSizesByPanorama(resolvedSizes);
+
+      // Add all panoramas to viewer
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      panoramas.forEach((p) => (viewer as any).add(p));
+      if (panoramas.length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (viewer as any).setPanorama(panoramas[0]);
+      }
+
+      // Start auto-rotate after delay: losowa prędkość 0.2–0.5, losowy kierunek, po pełnym obrocie losowa panorama
+      if (config.settings.autoRotate) {
+        setTimeout(() => {
+          if (viewer.OrbitControls) {
+            viewer.enableAutoRate();
+            applyRandomAutoRotate(viewer);
+            scheduleNextRotation();
+            setAutoRotate(true);
+          }
+        }, config.settings.autoRotateDelay);
+      }
+
+      // Splash screen fade
+      setTimeout(() => {
+        setIsLoading(false);
+      }, config.settings.splashDuration);
+    }, 50);
   }, [config, basePath, applyRandomAutoRotate, scheduleNextRotation]);
 
   useEffect(() => {

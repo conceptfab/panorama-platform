@@ -47,7 +47,7 @@ export function SplashScreen({
             style={{ width: `${progress}%` }}
           />
         </div>
-        <p className="text-zinc-500 text-sm mt-4 w-full text-center">
+        <p className="text-zinc-500 text-sm mt-4 w-full text-center animate-pulse">
           Ładowanie panoram...
         </p>
       </div>
