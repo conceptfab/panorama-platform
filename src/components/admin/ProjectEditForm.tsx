@@ -96,7 +96,7 @@ export function ProjectEditForm({
     }
   };
 
-const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
@@ -116,8 +116,16 @@ const handleSubmit = async (e: React.FormEvent) => {
         throw new Error('Failed to update project');
       }
 
+      const data = await res.json();
+      const updatedProject = data.project;
+
       toast.success('Projekt zaktualizowany');
-      router.refresh();
+
+      if (updatedProject && updatedProject.id !== project.id) {
+        router.push(`/admin/projects/${updatedProject.id}`);
+      } else {
+        router.refresh();
+      }
     } catch {
       toast.error('Nie udało się zaktualizować projektu');
     } finally {
@@ -336,8 +344,8 @@ const handleSubmit = async (e: React.FormEvent) => {
               </Link>
             </div>
           </form>
-          </CardContent>
-        </Card>
+        </CardContent>
+      </Card>
       <Card className="mt-6">
         <CardHeader>
           <CardTitle>Wymiana panoram</CardTitle>

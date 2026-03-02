@@ -257,6 +257,60 @@ export async function updateProject(
   return projects[index];
 }
 
+export async function renameProjectAndId(
+  oldId: string,
+  newName: string,
+  newDescription: string
+): Promise<Project | null> {
+  const projects = await getProjects();
+  const index = projects.findIndex((p) => p.id === oldId);
+
+  if (index === -1) return null;
+
+  const original = projects[index];
+
+  const existingIds = projects.map((p) => p.id).filter(id => id !== oldId);
+  const baseSlug = projectSlugFromName(newName, newDescription) || generateId('proj');
+  const newId = ensureUniqueProjectSlug(existingIds, baseSlug);
+
+  if (newId === oldId) return original;
+
+  await ensureDir(UPLOADS_DIR);
+  const sourceDir = path.join(UPLOADS_DIR, oldId);
+  const destinationDir = path.join(UPLOADS_DIR, newId);
+
+  if (existsSync(sourceDir)) {
+    if (existsSync(destinationDir)) {
+      throw new Error('Destination already exists');
+    }
+    await fs.rename(sourceDir, destinationDir);
+  } else {
+    await ensureDir(destinationDir);
+  }
+
+  const now = formatDate(new Date());
+
+  let newThumbnailUrl = original.thumbnailUrl;
+  if (newThumbnailUrl?.includes(`/uploads/projects/${oldId}/`)) {
+    newThumbnailUrl = newThumbnailUrl.replace(`/uploads/projects/${oldId}/`, `/uploads/projects/${newId}/`);
+  }
+
+  projects[index] = {
+    ...original,
+    id: newId,
+    name: newName,
+    description: newDescription || original.description,
+    configPath: `/uploads/projects/${newId}/config.json`,
+    thumbnailUrl: newThumbnailUrl,
+    updatedAt: now,
+  };
+
+  await writeJsonFile<ProjectsData>(PROJECTS_FILE, { projects });
+  await syncGroupsProjectIdsFromProjects();
+
+  return projects[index];
+}
+
 export async function deleteProject(id: string): Promise<boolean> {
   const projects = await getProjects();
   const index = projects.findIndex((p) => p.id === id);

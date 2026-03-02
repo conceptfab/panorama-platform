@@ -10,6 +10,7 @@ import {
   updateProject,
   updateProjectConfig,
   deleteProject,
+  renameProjectAndId,
 } from '@/lib/db/projects';
 import { getUserById } from '@/lib/db/users';
 import { ensurePanoramaVariantsForProject } from '@/lib/panorama-variants-server';
@@ -139,7 +140,15 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       }
     }
 
-    return NextResponse.json({ project: updated });
+    let finalProject = updated;
+    if (updates.name !== undefined && updates.name !== project.name) {
+      const renamed = await renameProjectAndId(id, updates.name, updates.description ?? project.description);
+      if (renamed) {
+        finalProject = renamed;
+      }
+    }
+
+    return NextResponse.json({ project: finalProject });
   } catch (error) {
     if (error instanceof Error && error.message.includes('Forbidden')) {
       return NextResponse.json(
