@@ -128,8 +128,8 @@ export function PanoViewer({
       const panorama = new PANOLENS.ImagePanorama(imagePath);
       resolvedSizes[index] =
         config.settings.optimizePanoramaForScreen &&
-        selectedVariant.width != null &&
-        selectedVariant.height != null
+          selectedVariant.width != null &&
+          selectedVariant.height != null
           ? { width: selectedVariant.width, height: selectedVariant.height }
           : null;
 
@@ -139,21 +139,21 @@ export function PanoViewer({
         setCurrentPanoramaIndex(index);
       });
 
-      // Link hotspots
-      const LINK_ICON =
-        'data:image/svg+xml,' +
-        encodeURIComponent(
-          '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512">' +
-            '<path fill="none" stroke="rgba(255,255,255,0.95)" stroke-width="28" stroke-linecap="round" stroke-linejoin="round" d="M48 224 L160 96 L272 224"/>' +
-            '</svg>'
-        );
-
       panoData.hotspots.forEach((hotspot) => {
         if (hotspot.type === 'link') {
           const targetIndex = config.panoramas.findIndex(
             (p) => p.id === hotspot.target
           );
           if (targetIndex !== -1) {
+            const hColor = hotspot.color || 'rgba(255,255,255,0.95)';
+            const customLinkIcon =
+              'data:image/svg+xml,' +
+              encodeURIComponent(
+                `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512">` +
+                `<path fill="none" stroke="${hColor}" stroke-width="28" stroke-linecap="round" stroke-linejoin="round" d="M48 224 L160 96 L272 224"/>` +
+                `</svg>`
+              );
+
             // Will be linked after all panoramas are created
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const panoAny = panorama as any;
@@ -161,7 +161,7 @@ export function PanoViewer({
             panoAny._pendingLinks.push({
               targetIndex,
               position: hotspot.position,
-              icon: LINK_ICON,
+              icon: customLinkIcon,
             });
           }
         }
@@ -297,7 +297,7 @@ export function PanoViewer({
           projectName: config.projectName,
         },
       }),
-    }).catch(() => {});
+    }).catch(() => { });
 
     return () => {
       const start = viewStartTimeRef.current;
@@ -310,7 +310,7 @@ export function PanoViewer({
             type: 'view_end',
             payload: { type: 'view_end', projectId, durationSeconds },
           }),
-        }).catch(() => {});
+        }).catch(() => { });
       }
     };
   }, [projectId, config.projectName]);
@@ -480,7 +480,7 @@ export function PanoViewer({
                   projectName: config.projectName,
                 },
               }),
-            }).catch(() => {});
+            }).catch(() => { });
           }
         } finally {
           hidden.forEach((obj) => {

@@ -133,18 +133,27 @@ export function HotspotEditor({
     return texture;
   }, []);
 
-  // Tekstura znacznika istniejącego hotspota (cyjan normalnie, pomarańczowy gdy zaznaczony)
-  const createExistingHotspotTexture = useCallback((isSelected: boolean) => {
+  // Tekstura znacznika istniejącego hotspota (z uwzględnieniem customowego koloru)
+  const createExistingHotspotTexture = useCallback((isSelected: boolean, customColor?: string) => {
     const canvas = document.createElement('canvas');
     canvas.width = 64;
     canvas.height = 64;
     const ctx = canvas.getContext('2d')!;
-    const color = isSelected ? '#f59e0b' : '#22d3ee';
+    const color = customColor || (isSelected ? '#f59e0b' : '#22d3ee');
     ctx.beginPath();
     ctx.arc(32, 32, 26, 0, Math.PI * 2);
-    ctx.strokeStyle = color;
+    ctx.strokeStyle = isSelected && !customColor ? '#f59e0b' : color;
     ctx.lineWidth = 4;
     ctx.stroke();
+
+    if (isSelected && customColor) {
+      ctx.beginPath();
+      ctx.arc(32, 32, 30, 0, Math.PI * 2);
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
     ctx.beginPath();
     ctx.arc(32, 32, 10, 0, Math.PI * 2);
     ctx.fillStyle = color;
@@ -154,7 +163,7 @@ export function HotspotEditor({
 
   // Etykieta hotspotu wyświetlana nad markerem w widoku sceny.
   const createHotspotLabelTexture = useCallback(
-    (text: string, isLink: boolean, isSelected: boolean) => {
+    (text: string, isLink: boolean, isSelected: boolean, customColor?: string) => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d')!;
 
@@ -184,9 +193,10 @@ export function HotspotEditor({
       ctx.fillStyle = isSelected ? 'rgba(217, 119, 6, 0.85)' : 'rgba(0, 0, 0, 0.70)';
       ctx.fill();
       ctx.lineWidth = 4;
-      ctx.strokeStyle = isSelected 
-        ? 'rgba(255, 255, 255, 0.95)' 
-        : (isLink ? 'rgba(34, 211, 238, 0.95)' : 'rgba(245, 158, 11, 0.95)');
+      const borderColor = customColor ? customColor : (isLink ? 'rgba(34, 211, 238, 0.95)' : 'rgba(245, 158, 11, 0.95)');
+      ctx.strokeStyle = isSelected
+        ? 'rgba(255, 255, 255, 0.95)'
+        : borderColor;
       ctx.stroke();
 
       ctx.font = font;
@@ -229,11 +239,9 @@ export function HotspotEditor({
     (viewer: { scene: { add: (o: unknown) => void } }, hotspots: Hotspot[]) => {
       if (!hotspots?.length || !window.THREE) return;
       const THREE = window.THREE;
-      
-      const textureStandard = createExistingHotspotTexture(false);
-      const textureSelected = createExistingHotspotTexture(true);
-      
-      existingHotspotTextureRef.current = [textureStandard, textureSelected];
+
+      const textures: unknown[] = [];
+
       const panoramas = configRef.current.panoramas;
       const panoramaNameById = new Map(
         panoramas.map((p, idx) => [p.id, `#${idx + 1} - ${p.name}`])
@@ -244,7 +252,8 @@ export function HotspotEditor({
         const markerZ = hp.position.z;
 
         const isSelected = hp.id === selectedHotspotId;
-        const texture = isSelected ? textureSelected : textureStandard;
+        const texture = createExistingHotspotTexture(isSelected, hp.color);
+        textures.push(texture);
 
         const mat = new THREE.SpriteMaterial({
           map: texture,
@@ -271,8 +280,10 @@ export function HotspotEditor({
         const { texture: labelTexture, aspect } = createHotspotLabelTexture(
           labelText,
           hp.type === 'link',
-          isSelected
+          isSelected,
+          hp.color
         );
+        textures.push(labelTexture);
         const labelMat = new THREE.SpriteMaterial({
           map: labelTexture,
           depthTest: false,
@@ -298,6 +309,8 @@ export function HotspotEditor({
         viewer.scene.add(labelSprite);
         hotspotMarkersRef.current.push(labelSprite);
       }
+
+      existingHotspotTextureRef.current = textures;
     },
     [createExistingHotspotTexture, createHotspotLabelTexture, selectedHotspotId]
   );
@@ -710,9 +723,8 @@ export function HotspotEditor({
         <div className="flex-1 relative">
           <div
             ref={containerRef}
-            className={`w-full h-full ${
-              isAddingMode ? 'cursor-crosshair' : ''
-            }`}
+            className={`w-full h-full ${isAddingMode ? 'cursor-crosshair' : ''
+              }`}
           />
 
           {/* Loading indicator */}
@@ -741,11 +753,10 @@ export function HotspotEditor({
               <Button
                 variant="secondary"
                 size="icon-xs"
-                className={`h-7 w-7 ${
-                  autoRotate
+                className={`h-7 w-7 ${autoRotate
                     ? 'bg-primary text-primary-foreground hover:bg-primary/90'
                     : ''
-                }`}
+                  }`}
                 onClick={toggleAutoRotate}
                 title="Auto-rotacja"
               >
@@ -893,11 +904,10 @@ export function HotspotEditor({
                 {currentPanorama?.hotspots.map((hotspot) => (
                   <div
                     key={hotspot.id}
-                    className={`p-2.5 rounded-md border cursor-pointer transition-colors ${
-                      selectedHotspotId === hotspot.id
+                    className={`p-2.5 rounded-md border cursor-pointer transition-colors ${selectedHotspotId === hotspot.id
                         ? 'border-primary bg-primary/5'
                         : 'hover:bg-muted/50'
-                    }`}
+                      }`}
                     onClick={() => setSelectedHotspotId(hotspot.id)}
                   >
                     <div className="flex items-center justify-between">
@@ -924,10 +934,10 @@ export function HotspotEditor({
 
                 {(!currentPanorama ||
                   currentPanorama.hotspots.length === 0) && (
-                  <p className="text-[10px] text-muted-foreground text-center py-2">
-                    Brak hotspotów
-                  </p>
-                )}
+                    <p className="text-[10px] text-muted-foreground text-center py-2">
+                      Brak hotspotów
+                    </p>
+                  )}
               </CardContent>
             </Card>
 
@@ -1053,6 +1063,34 @@ export function HotspotEditor({
                     >
                       Użyj klikniętej
                     </Button>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] uppercase font-bold text-muted-foreground/70">Kolor znacznika</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="color"
+                        className="h-8 w-12 p-1 cursor-pointer"
+                        value={selectedHotspot.color || '#22d3ee'}
+                        onChange={(e) =>
+                          handleUpdateHotspot(selectedHotspot.id, {
+                            color: e.target.value,
+                          })
+                        }
+                      />
+                      <Button
+                        variant="secondary"
+                        size="xs"
+                        className="h-8 text-[10px]"
+                        onClick={() =>
+                          handleUpdateHotspot(selectedHotspot.id, {
+                            color: undefined,
+                          })
+                        }
+                      >
+                        Domyślny
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

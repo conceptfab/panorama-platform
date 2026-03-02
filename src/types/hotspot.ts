@@ -13,6 +13,7 @@ export interface BaseHotspot {
   title: string;
   icon: string;
   scale: number;
+  color?: string;
 }
 
 export interface LinkHotspot extends BaseHotspot {
