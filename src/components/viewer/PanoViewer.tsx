@@ -12,6 +12,15 @@ import {
   getEffectiveViewportWidth,
   resolvePanoramaVariant,
 } from '@/lib/panorama-variants';
+import type { PanolensViewer, ImagePanorama } from '@/lib/panolens/types';
+
+interface ExtendedPanorama extends ImagePanorama {
+  _pendingLinks?: Array<{
+    targetIndex: number;
+    position: { x: number; y: number; z: number };
+    icon: string;
+  }>;
+}
 
 interface PanoViewerProps {
   config: ProjectConfig;
@@ -86,7 +95,7 @@ export function PanoViewer({
     }, durationMs);
   }, [applyRandomAutoRotate]);
 
-  const initViewer = useCallback(() => {
+  const initViewer = useCallback(async () => {
     if (!containerRef.current || !window.PANOLENS || !window.THREE) return;
 
     const THREE = window.THREE;
@@ -117,7 +126,9 @@ export function PanoViewer({
     const resolvedSizes: Array<{ width: number; height: number } | null> = [];
     const selectedFiles: string[] = [];
 
-    config.panoramas.forEach((panoData, index) => {
+    // Create panoramas in chunks to avoid blocking the main thread
+    for (let index = 0; index < config.panoramas.length; index++) {
+      const panoData = config.panoramas[index];
       const selectedVariant = resolvePanoramaVariant(
         panoData,
         config.settings.optimizePanoramaForScreen,
@@ -125,6 +136,14 @@ export function PanoViewer({
       );
       selectedFiles[index] = selectedVariant.file;
       const imagePath = `${basePath}/panoramas/${selectedVariant.file}`;
+
+      // Let the browser breathe and render SplashScreen
+      if (index > 0) {
+        await new Promise((resolve) =>
+          requestAnimationFrame(() => setTimeout(resolve, 0)),
+        );
+      }
+
       const panorama = new PANOLENS.ImagePanorama(imagePath);
       resolvedSizes[index] =
         config.settings.optimizePanoramaForScreen &&
@@ -155,10 +174,9 @@ export function PanoViewer({
               );
 
             // Will be linked after all panoramas are created
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const panoAny = panorama as any;
-            panoAny._pendingLinks = panoAny._pendingLinks || [];
-            panoAny._pendingLinks.push({
+            const panoNode = panorama as ExtendedPanorama;
+            panoNode._pendingLinks = panoNode._pendingLinks || [];
+            panoNode._pendingLinks.push({
               targetIndex,
               position: hotspot.position,
               icon: customLinkIcon,
@@ -168,15 +186,13 @@ export function PanoViewer({
       });
 
       panoramas[index] = panorama;
-    });
+    }
 
     // Render loop and heavy lifting delayed to allow splash screen to render
     setTimeout(() => {
       // Link panoramas
       panoramas.forEach((pano) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const panoAny = pano as any;
-        const pendingLinks = panoAny._pendingLinks;
+        const pendingLinks = (pano as ExtendedPanorama)._pendingLinks;
         if (pendingLinks) {
           pendingLinks.forEach(
             (link: {
@@ -184,8 +200,10 @@ export function PanoViewer({
               position: { x: number; y: number; z: number };
               icon: string;
             }) => {
-              const targetPano = panoramas[link.targetIndex];
-              panoAny.link(
+              const targetPano = panoramas[
+                link.targetIndex
+              ] as ExtendedPanorama;
+              (pano as ExtendedPanorama).link(
                 targetPano,
                 new THREE.Vector3(
                   link.position.x,
@@ -234,11 +252,11 @@ export function PanoViewer({
       setOptimizedSizesByPanorama(resolvedSizes);
 
       // Add all panoramas to viewer
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      panoramas.forEach((p) => (viewer as any).add(p));
+      panoramas.forEach((p) =>
+        (viewer as PanolensViewer).add(p as ImagePanorama),
+      );
       if (panoramas.length > 0) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (viewer as any).setPanorama(panoramas[0]);
+        (viewer as PanolensViewer).setPanorama(panoramas[0] as ImagePanorama);
       }
 
       // Start auto-rotate after delay: losowa prędkość 0.2–0.5, losowy kierunek, po pełnym obrocie losowa panorama
