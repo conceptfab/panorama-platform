@@ -105,15 +105,31 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
-    if (optimizePanoramaForScreen !== undefined) {
+    const configNeedsUpdate =
+      updates.name !== undefined ||
+      updates.description !== undefined ||
+      optimizePanoramaForScreen !== undefined;
+
+    if (configNeedsUpdate) {
       const config = await getProjectConfig(id);
       if (!config) {
         return NextResponse.json({ error: 'Config not found' }, { status: 404 });
       }
-      config.settings.optimizePanoramaForScreen = optimizePanoramaForScreen;
-      if (optimizePanoramaForScreen) {
-        await ensurePanoramaVariantsForProject(id, config);
+
+      if (updates.name !== undefined) {
+        config.projectName = updates.name;
       }
+      if (updates.description !== undefined) {
+        config.description = updates.description;
+      }
+
+      if (optimizePanoramaForScreen !== undefined) {
+        config.settings.optimizePanoramaForScreen = optimizePanoramaForScreen;
+        if (optimizePanoramaForScreen) {
+          await ensurePanoramaVariantsForProject(id, config);
+        }
+      }
+
       const saved = await updateProjectConfig(id, config);
       if (!saved) {
         return NextResponse.json(
