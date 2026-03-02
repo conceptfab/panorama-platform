@@ -145,13 +145,12 @@ export function PanoViewer({
             (p) => p.id === hotspot.target,
           );
           if (targetIndex !== -1) {
-            const hColor = hotspot.color || 'rgba(255,255,255,0.95)';
+            const hColor = hotspot.color || '#22d3ee';
             const customLinkIcon =
               'data:image/svg+xml,' +
               encodeURIComponent(
-                `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">` +
-                  `<circle cx="32" cy="32" r="26" fill="none" stroke="${hColor}" stroke-width="4"/>` +
-                  `<circle cx="32" cy="32" r="10" fill="${hColor}"/>` +
+                `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512">` +
+                  `<path fill="none" stroke="${hColor}" stroke-width="48" stroke-linecap="round" stroke-linejoin="round" d="M48 224 L160 96 L272 224"/>` +
                   `</svg>`,
               );
 
