@@ -30,7 +30,7 @@ export function PanoViewer({
   const viewerRef = useRef<unknown>(null);
   const panoramasRef = useRef<unknown[]>([]);
   const rotationCycleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null
+    null,
   );
   const [isLoading, setIsLoading] = useState(true);
   const [loadProgress, setLoadProgress] = useState(0);
@@ -55,7 +55,7 @@ export function PanoViewer({
       }
       return (60 / Math.abs(speed)) * 1000;
     },
-    []
+    [],
   );
 
   /** Po pełnym obrocie: losowa panorama, potem znowu losowa prędkość i kierunek. */
@@ -121,15 +121,15 @@ export function PanoViewer({
       const selectedVariant = resolvePanoramaVariant(
         panoData,
         config.settings.optimizePanoramaForScreen,
-        effectiveWidth
+        effectiveWidth,
       );
       selectedFiles[index] = selectedVariant.file;
       const imagePath = `${basePath}/panoramas/${selectedVariant.file}`;
       const panorama = new PANOLENS.ImagePanorama(imagePath);
       resolvedSizes[index] =
         config.settings.optimizePanoramaForScreen &&
-          selectedVariant.width != null &&
-          selectedVariant.height != null
+        selectedVariant.width != null &&
+        selectedVariant.height != null
           ? { width: selectedVariant.width, height: selectedVariant.height }
           : null;
 
@@ -142,16 +142,17 @@ export function PanoViewer({
       panoData.hotspots.forEach((hotspot) => {
         if (hotspot.type === 'link') {
           const targetIndex = config.panoramas.findIndex(
-            (p) => p.id === hotspot.target
+            (p) => p.id === hotspot.target,
           );
           if (targetIndex !== -1) {
             const hColor = hotspot.color || 'rgba(255,255,255,0.95)';
             const customLinkIcon =
               'data:image/svg+xml,' +
               encodeURIComponent(
-                `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512">` +
-                `<path fill="none" stroke="${hColor}" stroke-width="28" stroke-linecap="round" stroke-linejoin="round" d="M48 224 L160 96 L272 224"/>` +
-                `</svg>`
+                `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">` +
+                  `<circle cx="32" cy="32" r="26" fill="none" stroke="${hColor}" stroke-width="4"/>` +
+                  `<circle cx="32" cy="32" r="10" fill="${hColor}"/>` +
+                  `</svg>`,
               );
 
             // Will be linked after all panoramas are created
@@ -188,12 +189,12 @@ export function PanoViewer({
               new THREE.Vector3(
                 link.position.x,
                 link.position.y,
-                link.position.z
+                link.position.z,
               ),
               360,
-              link.icon
+              link.icon,
             );
-          }
+          },
         );
       }
     });
@@ -255,12 +256,7 @@ export function PanoViewer({
     setTimeout(() => {
       setIsLoading(false);
     }, config.settings.splashDuration);
-  }, [
-    config,
-    basePath,
-    applyRandomAutoRotate,
-    scheduleNextRotation,
-  ]);
+  }, [config, basePath, applyRandomAutoRotate, scheduleNextRotation]);
 
   useEffect(() => {
     if (scriptsLoaded) {
@@ -297,7 +293,7 @@ export function PanoViewer({
           projectName: config.projectName,
         },
       }),
-    }).catch(() => { });
+    }).catch(() => {});
 
     return () => {
       const start = viewStartTimeRef.current;
@@ -310,7 +306,7 @@ export function PanoViewer({
             type: 'view_end',
             payload: { type: 'view_end', projectId, durationSeconds },
           }),
-        }).catch(() => { });
+        }).catch(() => {});
       }
     };
   }, [projectId, config.projectName]);
@@ -352,7 +348,7 @@ export function PanoViewer({
       setPanorama: (p: unknown) => void;
       tweenControlCenter?: (
         v: { x: number; y: number; z: number },
-        ms: number
+        ms: number,
       ) => void;
     } | null;
     const panoramas = panoramasRef.current;
@@ -364,7 +360,7 @@ export function PanoViewer({
       requestAnimationFrame(() => {
         viewer.tweenControlCenter!(
           new window.THREE.Vector3(pos.x, pos.y, pos.z),
-          800
+          800,
         );
       });
     }
@@ -411,7 +407,7 @@ export function PanoViewer({
           // Watermark: jedna linia bazowa – CONCEPTFAB Pano v: x.y.z
           const appVersion =
             typeof process !== 'undefined'
-              ? process.env.NEXT_PUBLIC_APP_VERSION ?? '0.0.0'
+              ? (process.env.NEXT_PUBLIC_APP_VERSION ?? '0.0.0')
               : '0.0.0';
           const panoPart = ' Pano ';
           const versionPart = ` v: ${appVersion}`;
@@ -454,10 +450,10 @@ export function PanoViewer({
 
           const d = new Date();
           const timePart = `${String(d.getHours()).padStart(2, '0')}-${String(
-            d.getMinutes()
+            d.getMinutes(),
           ).padStart(2, '0')}`;
           const datePart = `${String(d.getDate()).padStart(2, '0')}-${String(
-            d.getMonth() + 1
+            d.getMonth() + 1,
           ).padStart(2, '0')}-${d.getFullYear()}`;
           const safeProject =
             config.projectName.replace(/[\s\W]+/g, '_').replace(/^_|_$/g, '') ||
@@ -480,7 +476,7 @@ export function PanoViewer({
                   projectName: config.projectName,
                 },
               }),
-            }).catch(() => { });
+            }).catch(() => {});
           }
         } finally {
           hidden.forEach((obj) => {
