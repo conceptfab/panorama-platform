@@ -197,7 +197,7 @@ export function PanoViewer({
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const infoData = hotspot as any;
             const desc = infoData.description ? ` - ${infoData.description}` : '';
-            infospot.addHoverText(hotspot.title + desc, 40);
+            infospot.addHoverText(hotspot.title + desc);
           }
 
           panorama.add(infospot);
