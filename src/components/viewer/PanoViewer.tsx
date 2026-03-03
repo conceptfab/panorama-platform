@@ -12,6 +12,15 @@ import {
   getEffectiveViewportWidth,
   resolvePanoramaVariant,
 } from '@/lib/panorama-variants';
+import type { PanolensViewer, ImagePanorama } from '@/lib/panolens/types';
+
+interface ExtendedPanorama extends ImagePanorama {
+  _pendingLinks?: Array<{
+    targetIndex: number;
+    position: { x: number; y: number; z: number };
+    icon: string;
+  }>;
+}
 
 interface PanoViewerProps {
   config: ProjectConfig;
@@ -30,7 +39,7 @@ export function PanoViewer({
   const viewerRef = useRef<unknown>(null);
   const panoramasRef = useRef<unknown[]>([]);
   const rotationCycleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null
+    null,
   );
   const [isLoading, setIsLoading] = useState(true);
   const [loadProgress, setLoadProgress] = useState(0);
@@ -55,7 +64,7 @@ export function PanoViewer({
       }
       return (60 / Math.abs(speed)) * 1000;
     },
-    []
+    [],
   );
 
   /** Po pełnym obrocie: losowa panorama, potem znowu losowa prędkość i kierunek. */
@@ -86,7 +95,7 @@ export function PanoViewer({
     }, durationMs);
   }, [applyRandomAutoRotate]);
 
-  const initViewer = useCallback(() => {
+  const initViewer = useCallback(async () => {
     if (!containerRef.current || !window.PANOLENS || !window.THREE) return;
 
     const THREE = window.THREE;
@@ -117,19 +126,29 @@ export function PanoViewer({
     const resolvedSizes: Array<{ width: number; height: number } | null> = [];
     const selectedFiles: string[] = [];
 
-    config.panoramas.forEach((panoData, index) => {
+    // Create panoramas in chunks to avoid blocking the main thread
+    for (let index = 0; index < config.panoramas.length; index++) {
+      const panoData = config.panoramas[index];
       const selectedVariant = resolvePanoramaVariant(
         panoData,
         config.settings.optimizePanoramaForScreen,
-        effectiveWidth
+        effectiveWidth,
       );
       selectedFiles[index] = selectedVariant.file;
       const imagePath = `${basePath}/panoramas/${selectedVariant.file}`;
+
+      // Let the browser breathe and render SplashScreen
+      if (index > 0) {
+        await new Promise((resolve) =>
+          requestAnimationFrame(() => setTimeout(resolve, 0)),
+        );
+      }
+
       const panorama = new PANOLENS.ImagePanorama(imagePath);
       resolvedSizes[index] =
         config.settings.optimizePanoramaForScreen &&
-          selectedVariant.width != null &&
-          selectedVariant.height != null
+        selectedVariant.width != null &&
+        selectedVariant.height != null
           ? { width: selectedVariant.width, height: selectedVariant.height }
           : null;
 
@@ -142,23 +161,22 @@ export function PanoViewer({
       panoData.hotspots.forEach((hotspot) => {
         if (hotspot.type === 'link') {
           const targetIndex = config.panoramas.findIndex(
-            (p) => p.id === hotspot.target
+            (p) => p.id === hotspot.target,
           );
           if (targetIndex !== -1) {
-            const hColor = hotspot.color || 'rgba(255,255,255,0.95)';
+            const hColor = hotspot.color || '#22d3ee';
             const customLinkIcon =
               'data:image/svg+xml,' +
               encodeURIComponent(
                 `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512">` +
-                `<path fill="none" stroke="${hColor}" stroke-width="28" stroke-linecap="round" stroke-linejoin="round" d="M48 224 L160 96 L272 224"/>` +
-                `</svg>`
+                  `<path fill="none" stroke="${hColor}" stroke-width="48" stroke-linecap="round" stroke-linejoin="round" d="M48 224 L160 96 L272 224"/>` +
+                  `</svg>`,
               );
 
             // Will be linked after all panoramas are created
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const panoAny = panorama as any;
-            panoAny._pendingLinks = panoAny._pendingLinks || [];
-            panoAny._pendingLinks.push({
+            const panoNode = panorama as ExtendedPanorama;
+            panoNode._pendingLinks = panoNode._pendingLinks || [];
+            panoNode._pendingLinks.push({
               targetIndex,
               position: hotspot.position,
               icon: customLinkIcon,
@@ -187,99 +205,97 @@ export function PanoViewer({
       });
 
       panoramas[index] = panorama;
-    });
-
-    // Link panoramas
-    panoramas.forEach((pano) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const panoAny = pano as any;
-      const pendingLinks = panoAny._pendingLinks;
-      if (pendingLinks) {
-        pendingLinks.forEach(
-          (link: {
-            targetIndex: number;
-            position: { x: number; y: number; z: number };
-            icon: string;
-          }) => {
-            const targetPano = panoramas[link.targetIndex];
-            panoAny.link(
-              targetPano,
-              new THREE.Vector3(
-                link.position.x,
-                link.position.y,
-                link.position.z
-              ),
-              360,
-              link.icon
-            );
-          }
-        );
-      }
-    });
-
-    // Preload images
-    config.panoramas.forEach((_, index) => {
-      const img = new Image();
-      img.onload = () => {
-        loadedCount++;
-        setLoadProgress((loadedCount / config.panoramas.length) * 100);
-        if (
-          config.settings.optimizePanoramaForScreen &&
-          !resolvedSizes[index] &&
-          img.naturalWidth > 0 &&
-          img.naturalHeight > 0
-        ) {
-          resolvedSizes[index] = {
-            width: img.naturalWidth,
-            height: img.naturalHeight,
-          };
-          setOptimizedSizesByPanorama((prev) => {
-            const next = [...prev];
-            next[index] = resolvedSizes[index];
-            return next;
-          });
-        }
-      };
-      img.onerror = () => {
-        loadedCount++;
-        setLoadProgress((loadedCount / config.panoramas.length) * 100);
-      };
-      img.src = `${basePath}/panoramas/${selectedFiles[index]}`;
-    });
-
-    panoramasRef.current = panoramas;
-    setOptimizedSizesByPanorama(resolvedSizes);
-
-    // Add all panoramas to viewer
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    panoramas.forEach((p) => (viewer as any).add(p));
-    if (panoramas.length > 0) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (viewer as any).setPanorama(panoramas[0]);
     }
 
-    // Start auto-rotate after delay: losowa prędkość 0.2–0.5, losowy kierunek, po pełnym obrocie losowa panorama
-    if (config.settings.autoRotate) {
-      setTimeout(() => {
-        if (viewer.OrbitControls) {
-          viewer.enableAutoRate();
-          applyRandomAutoRotate(viewer);
-          scheduleNextRotation();
-          setAutoRotate(true);
-        }
-      }, config.settings.autoRotateDelay);
-    }
-
-    // Splash screen fade
+    // Render loop and heavy lifting delayed to allow splash screen to render
     setTimeout(() => {
-      setIsLoading(false);
-    }, config.settings.splashDuration);
-  }, [
-    config,
-    basePath,
-    applyRandomAutoRotate,
-    scheduleNextRotation,
-  ]);
+      // Link panoramas
+      panoramas.forEach((pano) => {
+        const pendingLinks = (pano as ExtendedPanorama)._pendingLinks;
+        if (pendingLinks) {
+          pendingLinks.forEach(
+            (link: {
+              targetIndex: number;
+              position: { x: number; y: number; z: number };
+              icon: string;
+            }) => {
+              const targetPano = panoramas[
+                link.targetIndex
+              ] as ExtendedPanorama;
+              (pano as ExtendedPanorama).link(
+                targetPano,
+                new THREE.Vector3(
+                  link.position.x,
+                  link.position.y,
+                  link.position.z,
+                ),
+                360,
+                link.icon,
+              );
+            },
+          );
+        }
+      });
+
+      // Preload images
+      config.panoramas.forEach((_, index) => {
+        const img = new Image();
+        img.onload = () => {
+          loadedCount++;
+          setLoadProgress((loadedCount / config.panoramas.length) * 100);
+          if (
+            config.settings.optimizePanoramaForScreen &&
+            !resolvedSizes[index] &&
+            img.naturalWidth > 0 &&
+            img.naturalHeight > 0
+          ) {
+            resolvedSizes[index] = {
+              width: img.naturalWidth,
+              height: img.naturalHeight,
+            };
+            setOptimizedSizesByPanorama((prev) => {
+              const next = [...prev];
+              next[index] = resolvedSizes[index];
+              return next;
+            });
+          }
+        };
+        img.onerror = () => {
+          loadedCount++;
+          setLoadProgress((loadedCount / config.panoramas.length) * 100);
+        };
+        img.src = `${basePath}/panoramas/${selectedFiles[index]}`;
+      });
+
+      panoramasRef.current = panoramas;
+      setOptimizedSizesByPanorama(resolvedSizes);
+
+      // Add all panoramas to viewer
+      panoramas.forEach((p) =>
+        (viewer as PanolensViewer).add(p as ImagePanorama),
+      );
+      if (panoramas.length > 0) {
+        (viewer as PanolensViewer).setPanorama(panoramas[0] as ImagePanorama);
+      }
+
+      // Start auto-rotate after delay: losowa prędkość 0.2–0.5, losowy kierunek, po pełnym obrocie losowa panorama
+      if (config.settings.autoRotate) {
+        setTimeout(() => {
+          if (viewer.OrbitControls) {
+            viewer.enableAutoRate();
+            applyRandomAutoRotate(viewer);
+            scheduleNextRotation();
+            setAutoRotate(true);
+          }
+        }, config.settings.autoRotateDelay);
+      }
+
+      // Splash screen fade
+      setTimeout(() => {
+        setIsLoading(false);
+      }, config.settings.splashDuration);
+    }, 50);
+  }, [config, basePath, applyRandomAutoRotate, scheduleNextRotation]);
 
   useEffect(() => {
     if (scriptsLoaded) {
@@ -316,7 +332,7 @@ export function PanoViewer({
           projectName: config.projectName,
         },
       }),
-    }).catch(() => { });
+    }).catch(() => {});
 
     return () => {
       const start = viewStartTimeRef.current;
@@ -329,7 +345,7 @@ export function PanoViewer({
             type: 'view_end',
             payload: { type: 'view_end', projectId, durationSeconds },
           }),
-        }).catch(() => { });
+        }).catch(() => {});
       }
     };
   }, [projectId, config.projectName]);
@@ -371,7 +387,7 @@ export function PanoViewer({
       setPanorama: (p: unknown) => void;
       tweenControlCenter?: (
         v: { x: number; y: number; z: number },
-        ms: number
+        ms: number,
       ) => void;
     } | null;
     const panoramas = panoramasRef.current;
@@ -383,7 +399,7 @@ export function PanoViewer({
       requestAnimationFrame(() => {
         viewer.tweenControlCenter!(
           new window.THREE.Vector3(pos.x, pos.y, pos.z),
-          800
+          800,
         );
       });
     }
@@ -430,7 +446,7 @@ export function PanoViewer({
           // Watermark: jedna linia bazowa – CONCEPTFAB Pano v: x.y.z
           const appVersion =
             typeof process !== 'undefined'
-              ? process.env.NEXT_PUBLIC_APP_VERSION ?? '0.0.0'
+              ? (process.env.NEXT_PUBLIC_APP_VERSION ?? '0.0.0')
               : '0.0.0';
           const panoPart = ' Pano ';
           const versionPart = ` v: ${appVersion}`;
@@ -473,10 +489,10 @@ export function PanoViewer({
 
           const d = new Date();
           const timePart = `${String(d.getHours()).padStart(2, '0')}-${String(
-            d.getMinutes()
+            d.getMinutes(),
           ).padStart(2, '0')}`;
           const datePart = `${String(d.getDate()).padStart(2, '0')}-${String(
-            d.getMonth() + 1
+            d.getMonth() + 1,
           ).padStart(2, '0')}-${d.getFullYear()}`;
           const safeProject =
             config.projectName.replace(/[\s\W]+/g, '_').replace(/^_|_$/g, '') ||
@@ -499,7 +515,7 @@ export function PanoViewer({
                   projectName: config.projectName,
                 },
               }),
-            }).catch(() => { });
+            }).catch(() => {});
           }
         } finally {
           hidden.forEach((obj) => {
