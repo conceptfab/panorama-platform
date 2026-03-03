@@ -164,6 +164,25 @@ export function PanoViewer({
               icon: customLinkIcon,
             });
           }
+        } else if (hotspot.type === 'info') {
+          const hColor = hotspot.color || 'rgba(245, 158, 11, 0.95)';
+          const infoIcon =
+            'data:image/svg+xml,' +
+            encodeURIComponent(
+              `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 512"><path fill="${hColor}" d="M48 80a48 48 0 1 1 96 0A48 48 0 1 1 48 80zM0 224c0-17.7 14.3-32 32-32H96c17.7 0 32 14.3 32 32V448h32c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H48V256H32c-17.7 0-32-14.3-32-32z"/></svg>`
+            );
+
+          const infospot = new window.PANOLENS.Infospot(400, infoIcon);
+          infospot.position.set(hotspot.position.x, hotspot.position.y, hotspot.position.z);
+
+          if (hotspot.title) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const infoData = hotspot as any;
+            const desc = infoData.description ? ` - ${infoData.description}` : '';
+            infospot.addHoverText(hotspot.title + desc, 40);
+          }
+
+          panorama.add(infospot);
         }
       });
 

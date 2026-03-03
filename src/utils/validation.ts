@@ -87,6 +87,7 @@ export const baseHotspotSchema = z.object({
   title: z.string().max(200),
   icon: z.string(),
   scale: z.number().min(0.1).max(10),
+  color: z.string().optional(),
 });
 
 export const linkHotspotSchema = baseHotspotSchema.extend({
