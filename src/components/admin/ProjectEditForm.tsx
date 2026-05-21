@@ -19,6 +19,7 @@ import {
 import { ArrowLeft, Loader2, Save, Globe, GlobeLock } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { ProjectShareLinkCard } from './ProjectShareLinkCard';
 
 interface ProjectEditFormProps {
   project: Project;
@@ -246,6 +247,8 @@ export function ProjectEditForm({
           </form>
         </CardContent>
       </Card>
+
+      <ProjectShareLinkCard projectId={project.id} />
     </div>
   );
 }
