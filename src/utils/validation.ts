@@ -51,6 +51,20 @@ export const accessControlSchema = z.object({
   pending: z.array(pendingRequestSchema).optional(),
 });
 
+// Share link validation
+export const shareLinkSchema = z.object({
+  projectId: z.string(),
+  token: z.string(),
+  isActive: z.boolean(),
+  pinHash: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export const shareLinksDataSchema = z.object({
+  links: z.array(shareLinkSchema),
+});
+
 // Project validation
 export const projectSchema = z.object({
   id: z.string(),
