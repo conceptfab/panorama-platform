@@ -30,8 +30,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ ok: true });
     }
 
-    const { pin } = bodySchema.parse(await request.json());
-    if (!verifyPin(pin, link.pinHash)) {
+    const parsed = bodySchema.safeParse(await request.json());
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+    }
+    if (!verifyPin(parsed.data.pin, link.pinHash)) {
       return NextResponse.json({ error: 'Invalid PIN' }, { status: 401 });
     }
 
