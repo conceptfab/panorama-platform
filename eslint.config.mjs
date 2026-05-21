@@ -16,6 +16,8 @@ const eslintConfig = defineConfig([
     "public/panolens/**",
     // Scripts (Node.js)
     "scripts/**",
+    // Testy (Vitest)
+    "tests/**",
   ]),
 ]);
 
