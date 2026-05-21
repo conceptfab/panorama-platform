@@ -78,6 +78,22 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // Kubełek anonimowych wejść z linków współdzielenia
+    const shareDates = await getStatsDaysForUser('share');
+    if (shareDates.length > 0) {
+      let shareTotal = 0;
+      for (const d of shareDates) {
+        const day = await getStatsDay('share', d);
+        if (day) shareTotal += day.events.length;
+      }
+      result.push({
+        userId: 'share',
+        email: 'Linki publiczne (anonimowo)',
+        days: shareDates,
+        totalEvents: shareTotal,
+      });
+    }
+
     return NextResponse.json({ users: result });
   } catch (error) {
     console.error('Admin stats GET error:', error);
