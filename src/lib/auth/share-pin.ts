@@ -16,8 +16,8 @@ export function verifyPin(pin: string, stored: string): boolean {
   try {
     const salt = Buffer.from(parts[1], 'hex');
     const expected = Buffer.from(parts[2], 'hex');
-    const actual = scryptSync(pin, salt, expected.length);
-    if (actual.length !== expected.length) return false;
+    if (expected.length !== KEYLEN) return false;
+    const actual = scryptSync(pin, salt, KEYLEN);
     return timingSafeEqual(actual, expected);
   } catch {
     return false;

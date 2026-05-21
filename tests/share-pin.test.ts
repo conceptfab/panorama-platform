@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto';
 import { describe, it, expect } from 'vitest';
 import { hashPin, verifyPin } from '@/lib/auth/share-pin';
 
@@ -18,5 +19,10 @@ describe('share-pin', () => {
 
   it('rejects a malformed stored value', () => {
     expect(verifyPin('1234', 'garbage')).toBe(false);
+  });
+
+  it('rejects a stored value with an empty hash field', () => {
+    const salt = randomBytes(16).toString('hex');
+    expect(verifyPin('1234', `scrypt$${salt}$`)).toBe(false);
   });
 });
