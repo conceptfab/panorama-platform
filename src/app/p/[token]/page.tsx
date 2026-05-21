@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { getShareLinkByToken } from '@/lib/db/share-links';
 import { getProjectById, getProjectConfig } from '@/lib/db/projects';
 import { verifyShareUnlockToken } from '@/lib/auth/share-unlock';
+import { buildShareAssetBasePath } from '@/lib/share-assets';
 import { PanoViewer } from '@/components/viewer/PanoViewer';
 import { SharePinGate } from '@/components/viewer/SharePinGate';
 
@@ -37,7 +38,7 @@ export default async function PresentationPage({ params }: PageProps) {
     );
   }
 
-  const basePath = `/uploads/projects/${link.projectId}`;
+  const basePath = buildShareAssetBasePath(token);
 
   return (
     <div className="fixed inset-0 z-50 bg-black">
