@@ -13,6 +13,7 @@ import { generateId, formatDate, projectSlugFromName } from '@/utils/helpers';
 import { projectsDataSchema, projectConfigSchema } from '@/utils/validation';
 import { syncGroupsProjectIdsFromProjects } from './sync-groups-projects';
 import { ensurePanoramaVariantsForProject } from '@/lib/panorama-variants-server';
+import { deleteShareLink } from './share-links';
 
 const PROJECTS_FILE = 'projects.json';
 const UPLOADS_DIR = path.join(getDataRoot(), 'uploads', 'projects');
@@ -326,6 +327,7 @@ export async function deleteProject(id: string): Promise<boolean> {
   await writeJsonFile<ProjectsData>(PROJECTS_FILE, { projects });
 
   await syncGroupsProjectIdsFromProjects();
+  await deleteShareLink(id);
   return true;
 }
 
