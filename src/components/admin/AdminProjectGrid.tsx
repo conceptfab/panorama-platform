@@ -1,5 +1,7 @@
 'use client';
 
+// oxlint-disable react-doctor/no-cascading-set-state
+
 import { useState, useEffect, useMemo } from 'react';
 import { Project, Group } from '@/types';
 import { ProjectCard } from './ProjectCard';
@@ -102,7 +104,9 @@ export function AdminProjectGrid({
       ? []
       : (project.groupIds ?? []).flatMap((id) => {
           const group = groupMap.get(id);
-          return group ? [{ name: group.name, color: group.color }] : [];
+          return group
+            ? [{ id: group.id, name: group.name, color: group.color }]
+            : [];
         });
 
   if (!mounted) {

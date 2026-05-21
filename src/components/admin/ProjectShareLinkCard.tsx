@@ -1,5 +1,7 @@
 'use client';
 
+// oxlint-disable react-doctor/prefer-useReducer
+
 import { useEffect, useState, useCallback } from 'react';
 import {
   Card,

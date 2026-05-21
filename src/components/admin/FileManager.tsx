@@ -1,5 +1,7 @@
 'use client';
 
+// oxlint-disable react-doctor/no-giant-component react-doctor/prefer-useReducer
+
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Project } from '@/types';

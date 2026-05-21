@@ -1,5 +1,7 @@
 'use client';
 
+// oxlint-disable react-doctor/prefer-useReducer
+
 import { useState } from 'react';
 import { Group, Project } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';

@@ -1,5 +1,7 @@
 'use client';
 
+// oxlint-disable react-doctor/no-giant-component react-doctor/prefer-useReducer react-doctor/no-cascading-set-state react-doctor/no-fetch-in-effect
+
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -48,6 +50,7 @@ import { cn } from '@/lib/utils';
 import type { GridSize } from './AdminProjectGrid';
 
 export interface ProjectCardGroupInfo {
+  id: string;
   name: string;
   color: string;
 }

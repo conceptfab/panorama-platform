@@ -1,7 +1,3 @@
-'use client';
-
-import { useEffect, useState } from 'react';
-
 interface ClientDateProps {
   value: string;
   format?: 'date' | 'dateTime';
@@ -13,16 +9,11 @@ export function ClientDate({
   format = 'date',
   locale = 'pl-PL',
 }: ClientDateProps) {
-  const [formatted, setFormatted] = useState('');
+  const date = new Date(value);
+  const formatted =
+    format === 'dateTime'
+      ? date.toLocaleString(locale)
+      : date.toLocaleDateString(locale);
 
-  useEffect(() => {
-    const date = new Date(value);
-    setFormatted(
-      format === 'dateTime'
-        ? date.toLocaleString(locale)
-        : date.toLocaleDateString(locale)
-    );
-  }, [format, locale, value]);
-
-  return <>{formatted}</>;
+  return <span suppressHydrationWarning>{formatted}</span>;
 }

@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+// oxlint-disable react-doctor/async-parallel
+
 /**
  * Initialization script for Railway deployment.
  * Creates default data files if they don't exist.

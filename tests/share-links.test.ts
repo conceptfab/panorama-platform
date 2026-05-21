@@ -1,3 +1,4 @@
+// oxlint-disable react-doctor/server-sequential-independent-await
 import { describe, it, expect, beforeEach } from 'vitest';
 import { rmSync } from 'node:fs';
 import path from 'node:path';

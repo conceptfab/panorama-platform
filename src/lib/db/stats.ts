@@ -196,8 +196,6 @@ export async function getStatsForUser(
   options?: { full?: boolean }
 ): Promise<{ date: string; eventCount: number; day?: UserStatsDay }[]> {
   const dates = await getStatsDaysForUser(userId);
-  const result: { date: string; eventCount: number; day?: UserStatsDay }[] = [];
-
   const days = await Promise.all(
     dates.map(async (dateStr) => ({
       dateStr,

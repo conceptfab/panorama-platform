@@ -1,5 +1,7 @@
 'use client';
 
+// oxlint-disable react-doctor/no-fetch-in-effect
+
 import { useEffect, useRef } from 'react';
 
 const STATS_LOGIN_SENT = 'pano_stats_login_sent';

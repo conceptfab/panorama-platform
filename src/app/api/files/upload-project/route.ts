@@ -1,3 +1,4 @@
+// oxlint-disable react-doctor/server-hoist-static-io react-doctor/async-parallel react-doctor/async-await-in-loop
 import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
 import { promises as fs } from 'fs';

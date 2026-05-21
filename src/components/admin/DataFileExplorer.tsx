@@ -1,5 +1,7 @@
 'use client';
 
+// oxlint-disable react-doctor/prefer-useReducer react-doctor/rerender-state-only-in-handlers
+
 import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';

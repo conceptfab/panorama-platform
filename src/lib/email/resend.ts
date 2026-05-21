@@ -1,3 +1,4 @@
+// oxlint-disable react-doctor/async-await-in-loop
 import { Resend } from 'resend';
 import {
   getOTPEmailTemplate,

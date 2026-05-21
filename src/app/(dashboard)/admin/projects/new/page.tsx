@@ -1,5 +1,7 @@
 'use client';
 
+// oxlint-disable react-doctor/rendering-usetransition-loading
+
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';

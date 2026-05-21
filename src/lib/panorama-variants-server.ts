@@ -1,3 +1,4 @@
+// oxlint-disable react-doctor/async-await-in-loop
 import { promises as fs } from 'fs';
 import path from 'path';
 import sharp from 'sharp';

@@ -1,7 +1,6 @@
 'use client';
 
-/* eslint-disable react-doctor/no-giant-component, react-doctor/prefer-useReducer, react-doctor/rendering-usetransition-loading */
-
+// oxlint-disable react-doctor/no-giant-component react-doctor/prefer-useReducer react-doctor/rendering-usetransition-loading
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';

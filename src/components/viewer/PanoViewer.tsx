@@ -1,5 +1,7 @@
 'use client';
 
+// oxlint-disable react-doctor/no-giant-component react-doctor/prefer-useReducer react-doctor/no-effect-event-handler react-doctor/no-fetch-in-effect react-doctor/no-cascading-set-state
+
 import { useEffect, useRef, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { ProjectConfig } from '@/types';

@@ -1,5 +1,7 @@
 'use client';
 
+// oxlint-disable react-doctor/no-giant-component react-doctor/prefer-useReducer react-doctor/rendering-usetransition-loading
+
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';

@@ -193,7 +193,7 @@ export function FileUploader({ projectId }: FileUploaderProps) {
 
         {files.length > 0 && (
           <div className="space-y-2">
-            {files.map((f) => (
+            {files.map((f, index) => (
               <div
                 key={`${f.file.name}-${f.file.size}-${f.file.lastModified}`}
                 className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg"

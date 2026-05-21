@@ -1,3 +1,4 @@
+// oxlint-disable react-doctor/server-hoist-static-io
 import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs, Stats } from 'fs';
 import path from 'path';

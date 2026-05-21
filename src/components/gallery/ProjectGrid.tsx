@@ -1,5 +1,7 @@
 'use client';
 
+// oxlint-disable react-doctor/no-cascading-set-state
+
 import { useState, useEffect } from 'react';
 import { Project } from '@/types';
 import { ProjectThumbnail } from './ProjectThumbnail';

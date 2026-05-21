@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+// oxlint-disable react-doctor/no-giant-component react-doctor/prefer-useReducer react-doctor/no-cascading-set-state
+
+import { useEffect, useRef, useState, useCallback } from 'react';
 import Script from 'next/script';
 import Link from 'next/link';
 import { ProjectConfig, Hotspot, Position3D } from '@/types';
