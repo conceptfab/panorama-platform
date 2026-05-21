@@ -1,0 +1,48 @@
+{
+  "date": "2026-05-21",
+  "userId": "user-001",
+  "events": [
+    {
+      "type": "login",
+      "at": "2026-05-21T14:05:00.350Z",
+      "system": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+        "language": "pl-PL",
+        "languages": [
+          "pl-PL",
+          "pl",
+          "en-US",
+          "en"
+        ],
+        "platform": "MacIntel",
+        "screenWidth": 2048,
+        "screenHeight": 1330,
+        "windowWidth": 1787,
+        "windowHeight": 1139,
+        "devicePixelRatio": 1,
+        "timezone": "Europe/Warsaw"
+      }
+    },
+    {
+      "type": "login",
+      "at": "2026-05-21T14:05:00.351Z",
+      "system": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+        "language": "pl-PL",
+        "languages": [
+          "pl-PL",
+          "pl",
+          "en-US",
+          "en"
+        ],
+        "platform": "MacIntel",
+        "screenWidth": 2048,
+        "screenHeight": 1330,
+        "windowWidth": 1787,
+        "windowHeight": 1139,
+        "devicePixelRatio": 1,
+        "timezone": "Europe/Warsaw"
+      }
+    }
+  ]
+}
