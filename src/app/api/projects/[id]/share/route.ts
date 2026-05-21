@@ -10,6 +10,7 @@ import {
   setShareActive,
   setSharePin,
 } from '@/lib/db/share-links';
+import { buildShareUrl } from '@/lib/share-url';
 import { Project, ShareLink } from '@/types';
 import { z } from 'zod';
 
@@ -50,7 +51,7 @@ function buildResponse(request: NextRequest, link: ShareLink | null) {
   return {
     isActive: link.isActive,
     hasPin: link.pinHash !== null,
-    url: `${request.nextUrl.origin}/p/${link.token}`,
+    url: buildShareUrl(request.nextUrl.origin, link.token),
   };
 }
 
