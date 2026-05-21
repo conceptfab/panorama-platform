@@ -41,14 +41,14 @@ export function ProjectEditForm({
   const selectableGroups = editorGroupIds
     ? groups.filter((g) => editorGroupIds.includes(g.id))
     : groups;
-  const router = useRouter();
+  const { push, refresh } = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
-  const [name, setName] = useState(project.name);
-  const [description, setDescription] = useState(project.description);
-  const [isPublished, setIsPublished] = useState(project.isPublished);
+  const [name, setName] = useState(() => project.name);
+  const [description, setDescription] = useState(() => project.description);
+  const [isPublished, setIsPublished] = useState(() => project.isPublished);
   const [optimizePanoramaForScreen, setOptimizePanoramaForScreen] = useState(
-    initialOptimizePanoramaForScreen
+    () => initialOptimizePanoramaForScreen
   );
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>(
     project.groupIds ?? []
@@ -89,7 +89,7 @@ export function ProjectEditForm({
 
       setIsPublished(!isPublished);
       toast.success(isPublished ? 'Projekt ukryty' : 'Projekt opublikowany');
-      router.refresh();
+      refresh();
     } catch {
       toast.error('Nie udało się zmienić statusu');
     } finally {
@@ -123,9 +123,9 @@ export function ProjectEditForm({
       toast.success('Projekt zaktualizowany');
 
       if (updatedProject && updatedProject.id !== project.id) {
-        router.push(`/admin/projects/${updatedProject.id}`);
+        push(`/admin/projects/${updatedProject.id}`);
       } else {
-        router.refresh();
+        refresh();
       }
     } catch {
       toast.error('Nie udało się zaktualizować projektu');
@@ -217,7 +217,7 @@ export function ProjectEditForm({
       <div className="mb-6">
         <Link href="/admin/projects">
           <Button variant="ghost" size="sm">
-            <ArrowLeft className="h-4 w-4 mr-2" />
+            <ArrowLeft className="size-4 mr-2" />
             Powrót do listy
           </Button>
         </Link>
@@ -238,11 +238,11 @@ export function ProjectEditForm({
               }
             >
               {isPublishing ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="size-4 mr-2 animate-spin" />
               ) : isPublished ? (
-                <Globe className="h-4 w-4 mr-2" />
+                <Globe className="size-4 mr-2" />
               ) : (
-                <GlobeLock className="h-4 w-4 mr-2" />
+                <GlobeLock className="size-4 mr-2" />
               )}
               {isPublished ? 'Opublikowany' : 'Opublikuj'}
             </Button>
@@ -316,10 +316,10 @@ export function ProjectEditForm({
                         checked={selectedGroupIds.includes(group.id)}
                         onChange={() => toggleGroup(group.id)}
                         disabled={groupsReadOnly}
-                        className="h-4 w-4 rounded border-input"
+                        className="size-4 rounded border-input"
                       />
                       <span
-                        className="inline-block w-3 h-3 rounded-full shrink-0"
+                        className="inline-block size-3 rounded-full shrink-0"
                         style={{ backgroundColor: group.color }}
                       />
                       <span className="text-sm">{group.name}</span>
@@ -332,9 +332,9 @@ export function ProjectEditForm({
             <div className="flex gap-4">
               <Button type="submit" disabled={isLoading || !name.trim()}>
                 {isLoading ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="size-4 mr-2 animate-spin" />
                 ) : (
-                  <Save className="h-4 w-4 mr-2" />
+                  <Save className="size-4 mr-2" />
                 )}
                 Zapisz zmiany
               </Button>
@@ -376,7 +376,7 @@ export function ProjectEditForm({
           )}
           {isConfigLoading ? (
             <p className="text-xs text-muted-foreground flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="size-4 animate-spin" />
               Ładowanie panoram…
             </p>
           ) : config ? (
@@ -420,7 +420,7 @@ export function ProjectEditForm({
                           size="icon-xs"
                           onClick={() => handleReplaceFile(pano.id, null)}
                         >
-                          <X className="h-3 w-3" />
+                          <X className="size-3" />
                         </Button>
                       )}
                     </div>
@@ -439,7 +439,7 @@ export function ProjectEditForm({
             onClick={handleReplaceSubmit}
           >
             {isReplacing && (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              <Loader2 className="size-4 mr-2 animate-spin" />
             )}
             Zastąp panoramy ({replaceCount})
           </Button>

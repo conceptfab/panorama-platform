@@ -16,8 +16,7 @@ interface RouteParams {
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const { id } = await params;
-    await requireAdmin();
+    const [{ id }] = await Promise.all([params, requireAdmin()]);
 
     const group = await getGroupById(id);
     if (!group) {
@@ -35,8 +34,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
-    const { id } = await params;
-    await requireAdmin();
+    const [{ id }] = await Promise.all([params, requireAdmin()]);
 
     const body = await request.json();
     const updates = updateGroupSchema.parse(body);
@@ -60,8 +58,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
-    const { id } = await params;
-    await requireAdmin();
+    const [{ id }] = await Promise.all([params, requireAdmin()]);
 
     const success = await deleteGroup(id);
     if (!success) {

@@ -165,10 +165,14 @@ export function StatsPanel() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <label className="text-sm text-muted-foreground">
+          <label
+            htmlFor="cleanup-older-than-days"
+            className="text-sm text-muted-foreground"
+          >
             Usuń historię starszą niż:
           </label>
           <input
+            id="cleanup-older-than-days"
             type="number"
             min={1}
             max={365}
@@ -186,9 +190,9 @@ export function StatsPanel() {
             disabled={cleaning}
           >
             {cleaning ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="size-4 animate-spin" />
             ) : (
-              <Trash2 className="h-4 w-4" />
+              <Trash2 className="size-4" />
             )}
             <span className="ml-2">Usuń starą historię</span>
           </Button>
@@ -206,7 +210,7 @@ export function StatsPanel() {
         <CardContent>
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <Loader2 className="size-8 animate-spin text-muted-foreground" />
             </div>
           ) : users.length === 0 ? (
             <p className="text-muted-foreground py-8 text-center">
@@ -231,9 +235,9 @@ export function StatsPanel() {
                     >
                       <TableCell>
                         {expandedUserId === u.userId ? (
-                          <ChevronDown className="h-4 w-4" />
+                          <ChevronDown className="size-4" />
                         ) : (
-                          <ChevronRight className="h-4 w-4" />
+                          <ChevronRight className="size-4" />
                         )}
                       </TableCell>
                       <TableCell>{u.email ?? u.userId}</TableCell>
@@ -247,7 +251,7 @@ export function StatsPanel() {
                         <TableCell colSpan={4} className="bg-muted/30 p-4">
                           {loadingDetails ? (
                             <div className="flex justify-center py-4">
-                              <Loader2 className="h-6 w-6 animate-spin" />
+                              <Loader2 className="size-6 animate-spin" />
                             </div>
                           ) : (
                             <div className="space-y-3">
@@ -281,9 +285,9 @@ export function StatsPanel() {
                                       Zdarzenia z dnia {dayEvents.date}
                                     </p>
                                     <ul className="space-y-1">
-                                      {dayEvents.events.map((e, i) => (
+                                      {dayEvents.events.map((e) => (
                                         <li
-                                          key={i}
+                                          key={`${e.type}-${e.at}`}
                                           className="flex gap-2 flex-wrap"
                                         >
                                           <Badge

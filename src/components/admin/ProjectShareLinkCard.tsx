@@ -97,7 +97,7 @@ export function ProjectShareLinkCard({ projectId }: { projectId: string }) {
       <CardContent className="space-y-4">
         {loading || !state ? (
           <div className="flex justify-center py-6">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <Loader2 className="size-6 animate-spin text-muted-foreground" />
           </div>
         ) : (
           <>
@@ -127,9 +127,9 @@ export function ProjectShareLinkCard({ projectId }: { projectId: string }) {
                   />
                   <Button type="button" variant="outline" onClick={copy}>
                     {copied ? (
-                      <Check className="h-4 w-4" />
+                      <Check className="size-4" />
                     ) : (
-                      <Copy className="h-4 w-4" />
+                      <Copy className="size-4" />
                     )}
                   </Button>
                 </div>

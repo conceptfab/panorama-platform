@@ -12,7 +12,7 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 
 export default function NewProjectPage() {
-  const router = useRouter();
+  const { push } = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -34,7 +34,7 @@ export default function NewProjectPage() {
 
       const data = await res.json();
       toast.success('Projekt utworzony');
-      router.push(`/admin/projects/${data.project.id}`);
+      push(`/admin/projects/${data.project.id}`);
     } catch {
       toast.error('Nie udało się utworzyć projektu');
     } finally {
@@ -47,7 +47,7 @@ export default function NewProjectPage() {
       <div className="mb-6">
         <Link href="/admin/projects">
           <Button variant="ghost" size="sm">
-            <ArrowLeft className="h-4 w-4 mr-2" />
+            <ArrowLeft className="size-4 mr-2" />
             Powrót do listy
           </Button>
         </Link>
@@ -83,7 +83,7 @@ export default function NewProjectPage() {
 
             <div className="flex gap-4">
               <Button type="submit" disabled={isLoading || !name.trim()}>
-                {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                {isLoading && <Loader2 className="size-4 mr-2 animate-spin" />}
                 Utwórz projekt
               </Button>
               <Link href="/admin/projects">

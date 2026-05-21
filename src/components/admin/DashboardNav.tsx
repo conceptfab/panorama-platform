@@ -82,7 +82,7 @@ export function DashboardNav({ userRole, userEmail }: DashboardNavProps) {
                       size="sm"
                       className="gap-2"
                     >
-                      <Icon className="h-4 w-4" />
+                      <Icon className="size-4" />
                       {item.label}
                     </Button>
                   </Link>
@@ -100,7 +100,7 @@ export function DashboardNav({ userRole, userEmail }: DashboardNavProps) {
                   onClick={() => setBugHunterOpen(true)}
                   title="Bug hunter – zgłoś błąd"
                 >
-                  <Bug className="h-5 w-5" />
+                  <Bug className="size-5" />
                 </Button>
                 <BugHunterDialog
                   open={bugHunterOpen}
@@ -111,7 +111,7 @@ export function DashboardNav({ userRole, userEmail }: DashboardNavProps) {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="md:hidden">
-                  <Menu className="h-5 w-5" />
+                  <Menu className="size-5" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
@@ -123,7 +123,7 @@ export function DashboardNav({ userRole, userEmail }: DashboardNavProps) {
                         href={item.href}
                         className="flex items-center gap-2"
                       >
-                        <Icon className="h-4 w-4" />
+                        <Icon className="size-4" />
                         {item.label}
                       </Link>
                     </DropdownMenuItem>
@@ -135,7 +135,7 @@ export function DashboardNav({ userRole, userEmail }: DashboardNavProps) {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="gap-2">
-                  <Avatar className="h-8 w-8">
+                  <Avatar className="size-8">
                     <AvatarFallback className="text-xs">
                       {initials}
                     </AvatarFallback>
@@ -156,7 +156,7 @@ export function DashboardNav({ userRole, userEmail }: DashboardNavProps) {
                   onClick={handleLogout}
                   className="text-red-600"
                 >
-                  <LogOut className="h-4 w-4 mr-2" />
+                  <LogOut className="size-4 mr-2" />
                   Wyloguj
                 </DropdownMenuItem>
               </DropdownMenuContent>

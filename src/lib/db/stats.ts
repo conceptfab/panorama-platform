@@ -157,8 +157,11 @@ export async function getStatsDaysForUser(userId: string): Promise<string[]> {
   try {
     const files = await fs.readdir(userDir);
     const dates = files
-      .filter((f) => f.endsWith('.json') && /^\d{4}-\d{2}-\d{2}\.json$/.test(f))
-      .map((f) => f.replace('.json', ''))
+      .flatMap((f) =>
+        f.endsWith('.json') && /^\d{4}-\d{2}-\d{2}\.json$/.test(f)
+          ? [f.replace('.json', '')]
+          : []
+      )
       .sort();
     return dates;
   } catch (err) {
@@ -195,9 +198,15 @@ export async function getStatsForUser(
   const dates = await getStatsDaysForUser(userId);
   const result: { date: string; eventCount: number; day?: UserStatsDay }[] = [];
 
-  for (const dateStr of dates) {
-    const day = await getStatsDay(userId, dateStr);
-    if (!day) continue;
+  const days = await Promise.all(
+    dates.map(async (dateStr) => ({
+      dateStr,
+      day: await getStatsDay(userId, dateStr),
+    }))
+  );
+
+  return days.flatMap(({ dateStr, day }) => {
+    if (!day) return [];
     const item: { date: string; eventCount: number; day?: UserStatsDay } = {
       date: dateStr,
       eventCount: day.events.length,
@@ -205,10 +214,8 @@ export async function getStatsForUser(
     if (options?.full) {
       item.day = day;
     }
-    result.push(item);
-  }
-
-  return result;
+    return [item];
+  });
 }
 
 /** Lista ID użytkowników (katalogów), którzy mają jakiekolwiek statystyki. */
@@ -216,7 +223,7 @@ export async function listUserIdsWithStats(): Promise<string[]> {
   try {
     await ensureDir(STATS_DIR);
     const entries = await fs.readdir(STATS_DIR, { withFileTypes: true });
-    return entries.filter((e) => e.isDirectory()).map((e) => e.name);
+    return entries.flatMap((e) => (e.isDirectory() ? [e.name] : []));
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
       return [];
@@ -237,26 +244,28 @@ export async function deleteStatsOlderThan(
 
   const userIds = userId ? [safeUserId(userId)] : await listUserIdsWithStats();
 
-  for (const uid of userIds) {
-    const userDir = path.join(STATS_DIR, uid);
-    try {
-      const files = await fs.readdir(userDir);
-      for (const f of files) {
-        if (!f.endsWith('.json') || !/^\d{4}-\d{2}-\d{2}\.json$/.test(f)) {
-          continue;
+  const deletedCounts = await Promise.all(
+    userIds.map(async (uid) => {
+      const userDir = path.join(STATS_DIR, uid);
+      try {
+        const files = await fs.readdir(userDir);
+        const oldFiles = files.filter((f) => {
+          if (!f.endsWith('.json') || !/^\d{4}-\d{2}-\d{2}\.json$/.test(f)) {
+            return false;
+          }
+          return f.replace('.json', '') < cutoffStr;
+        });
+        await Promise.all(oldFiles.map((f) => deleteFile(path.join(userDir, f))));
+        return oldFiles.length;
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+          throw err;
         }
-        const dateStr = f.replace('.json', '');
-        if (dateStr < cutoffStr) {
-          await deleteFile(path.join(userDir, f));
-          deleted++;
-        }
+        return 0;
       }
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
-        throw err;
-      }
-    }
-  }
+    })
+  );
+  deleted = deletedCounts.reduce((total, count) => total + count, 0);
 
   return { deleted };
 }

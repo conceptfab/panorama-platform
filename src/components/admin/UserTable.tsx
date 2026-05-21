@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { User, Group } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { ClientDate } from '@/components/ui/client-date';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -39,7 +40,7 @@ interface UserTableProps {
 }
 
 export function UserTable({ users, groups }: UserTableProps) {
-  const router = useRouter();
+  const { refresh } = useRouter();
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editingRole, setEditingRole] = useState<'user' | 'admin' | 'editor'>(
     'user'
@@ -61,9 +62,12 @@ export function UserTable({ users, groups }: UserTableProps) {
   const [creating, setCreating] = useState(false);
 
   const getGroupNames = (groupIds: string[]) => {
+    const groupById = new Map(groups.map((group) => [group.id, group]));
     return groupIds
-      .map((id) => groups.find((g) => g.id === id)?.name)
-      .filter(Boolean)
+      .flatMap((id) => {
+        const group = groupById.get(id);
+        return group ? [group.name] : [];
+      })
       .join(', ');
   };
 
@@ -107,7 +111,7 @@ export function UserTable({ users, groups }: UserTableProps) {
       if (!res.ok) throw new Error('Failed to update user');
       toast.success('Grupy użytkownika zaktualizowane');
       handleCloseDialog();
-      router.refresh();
+      refresh();
     } catch {
       toast.error('Nie udało się zapisać grup');
     } finally {
@@ -131,7 +135,7 @@ export function UserTable({ users, groups }: UserTableProps) {
       }
       toast.success('Użytkownik usunięty');
       setUserToDelete(null);
-      router.refresh();
+      refresh();
     } catch {
       toast.error('Nie udało się usunąć użytkownika');
     } finally {
@@ -195,7 +199,7 @@ export function UserTable({ users, groups }: UserTableProps) {
       }
 
       handleCloseAddDialog();
-      router.refresh();
+      refresh();
     } catch {
       toast.error('Nie udało się utworzyć użytkownika');
     } finally {
@@ -217,7 +221,7 @@ export function UserTable({ users, groups }: UserTableProps) {
               </p>
             </div>
             <Button onClick={handleOpenAddDialog} className="gap-2">
-              <UserPlus className="h-4 w-4" />
+              <UserPlus className="size-4" />
               Dodaj użytkownika
             </Button>
           </div>
@@ -265,7 +269,7 @@ export function UserTable({ users, groups }: UserTableProps) {
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {user.lastLoginAt
-                      ? new Date(user.lastLoginAt).toLocaleString('pl-PL')
+                      ? <ClientDate value={user.lastLoginAt} format="dateTime" />
                       : 'Nigdy'}
                   </TableCell>
                   <TableCell className="flex items-center gap-1">
@@ -276,17 +280,17 @@ export function UserTable({ users, groups }: UserTableProps) {
                       onClick={() => handleOpenDialog(user)}
                       title="Przypisz użytkownika do grup"
                     >
-                      <Pencil className="h-4 w-4" />
+                      <Pencil className="size-4" />
                       <span className="hidden sm:inline text-xs">Grupy</span>
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      className="size-8 text-destructive hover:text-destructive"
                       onClick={() => handleDeleteClick(user)}
                       title="Usuń użytkownika"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="size-4" />
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -361,7 +365,7 @@ export function UserTable({ users, groups }: UserTableProps) {
                       name="editing-role"
                       checked={editingRole === 'user'}
                       onChange={() => setEditingRole('user')}
-                      className="h-4 w-4 border-input"
+                      className="size-4 border-input"
                     />
                     <span className="text-sm">Użytkownik</span>
                   </label>
@@ -371,7 +375,7 @@ export function UserTable({ users, groups }: UserTableProps) {
                       name="editing-role"
                       checked={editingRole === 'editor'}
                       onChange={() => setEditingRole('editor')}
-                      className="h-4 w-4 border-input"
+                      className="size-4 border-input"
                     />
                     <span className="text-sm">Edytor</span>
                   </label>
@@ -381,7 +385,7 @@ export function UserTable({ users, groups }: UserTableProps) {
                       name="editing-role"
                       checked={editingRole === 'admin'}
                       onChange={() => setEditingRole('admin')}
-                      className="h-4 w-4 border-input"
+                      className="size-4 border-input"
                     />
                     <span className="text-sm">Administrator</span>
                   </label>
@@ -407,10 +411,10 @@ export function UserTable({ users, groups }: UserTableProps) {
                           type="checkbox"
                           checked={selectedGroupIds.includes(group.id)}
                           onChange={() => toggleGroup(group.id)}
-                          className="h-4 w-4 rounded border-input"
+                          className="size-4 rounded border-input"
                         />
                         <span
-                          className="inline-block w-3 h-3 rounded-full shrink-0"
+                          className="inline-block size-3 rounded-full shrink-0"
                           style={{ backgroundColor: group.color }}
                         />
                         <span className="text-sm">{group.name}</span>
@@ -506,10 +510,10 @@ export function UserTable({ users, groups }: UserTableProps) {
                         checked={newUserGroupIds.includes(group.id)}
                         onChange={() => toggleNewUserGroup(group.id)}
                         disabled={creating}
-                        className="h-4 w-4 rounded border-input"
+                        className="size-4 rounded border-input"
                       />
                       <span
-                        className="inline-block w-3 h-3 rounded-full shrink-0"
+                        className="inline-block size-3 rounded-full shrink-0"
                         style={{ backgroundColor: group.color }}
                       />
                       <span className="text-sm">{group.name}</span>
@@ -527,7 +531,7 @@ export function UserTable({ users, groups }: UserTableProps) {
                   checked={addToWhitelist}
                   onChange={(e) => setAddToWhitelist(e.target.checked)}
                   disabled={creating}
-                  className="h-4 w-4 rounded border-input"
+                  className="size-4 rounded border-input"
                 />
                 <span className="text-sm">
                   Automatycznie dodaj do białej listy

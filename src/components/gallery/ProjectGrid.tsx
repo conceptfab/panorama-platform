@@ -85,10 +85,10 @@ export function ProjectGrid({ projects }: ProjectGridProps) {
               variant={isActive ? 'default' : 'outline'}
               size="sm"
               onClick={() => handleSizeChange(size)}
-              className={cn('h-8 w-8 p-0', isActive && 'pointer-events-none')}
+              className={cn('size-8 p-0', isActive && 'pointer-events-none')}
               title={config.label}
             >
-              <Icon className="h-4 w-4" />
+              <Icon className="size-4" />
             </Button>
           );
         })}

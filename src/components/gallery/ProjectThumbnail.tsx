@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Project } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { ClientDate } from '@/components/ui/client-date';
 import { Eye, Image as ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { GridSize } from './ProjectGrid';
@@ -30,9 +31,9 @@ const sizeConfig: Record<
   large: {
     padding: 'p-4',
     titleSize: 'text-base',
-    iconSize: 'h-8 w-8',
-    placeholderIcon: 'h-12 w-12',
-    hoverIcon: 'h-8 w-8',
+    iconSize: 'size-8',
+    placeholderIcon: 'size-12',
+    hoverIcon: 'size-8',
     badgeSize: 'text-xs',
     showDate: true,
     gap: 'gap-4',
@@ -40,9 +41,9 @@ const sizeConfig: Record<
   medium: {
     padding: 'p-3',
     titleSize: 'text-sm',
-    iconSize: 'h-6 w-6',
-    placeholderIcon: 'h-10 w-10',
-    hoverIcon: 'h-6 w-6',
+    iconSize: 'size-6',
+    placeholderIcon: 'size-10',
+    hoverIcon: 'size-6',
     badgeSize: 'text-xs',
     showDate: true,
     gap: 'gap-3',
@@ -50,9 +51,9 @@ const sizeConfig: Record<
   small: {
     padding: 'p-2',
     titleSize: 'text-xs',
-    iconSize: 'h-5 w-5',
-    placeholderIcon: 'h-8 w-8',
-    hoverIcon: 'h-5 w-5',
+    iconSize: 'size-5',
+    placeholderIcon: 'size-8',
+    hoverIcon: 'size-5',
     badgeSize: 'text-[10px]',
     showDate: false,
     gap: 'gap-2',
@@ -74,6 +75,7 @@ export function ProjectThumbnail({
               src={project.thumbnailUrl}
               alt={project.name}
               fill
+              sizes="(max-width: 768px) 100vw, 33vw"
               className="object-cover transition-transform group-hover:scale-105"
             />
           ) : (
@@ -90,11 +92,11 @@ export function ProjectThumbnail({
             <span
               className={cn(
                 'flex items-center justify-center rounded-full bg-black/50 text-white shrink-0',
-                config.iconSize === 'h-8 w-8'
-                  ? 'h-9 w-9'
-                  : config.iconSize === 'h-6 w-6'
-                  ? 'h-7 w-7'
-                  : 'h-6 w-6'
+                config.iconSize === 'size-8'
+                  ? 'size-9'
+                  : config.iconSize === 'size-6'
+                  ? 'size-7'
+                  : 'size-6'
               )}
               title="Otwórz panoramę"
               aria-hidden
@@ -120,7 +122,7 @@ export function ProjectThumbnail({
             </Badge>
             {config.showDate && (
               <span className="text-xs text-muted-foreground">
-                {new Date(project.updatedAt).toLocaleDateString('pl-PL')}
+                <ClientDate value={project.updatedAt} />
               </span>
             )}
           </div>

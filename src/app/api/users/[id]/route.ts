@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAdmin, getSession } from '@/lib/auth/session';
+import { requireAdmin } from '@/lib/auth/session';
 import { getUserById, updateUser, deleteUser } from '@/lib/db/users';
 import { z } from 'zod';
 
@@ -15,8 +15,7 @@ interface RouteParams {
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const { id } = await params;
-    await requireAdmin();
+    const [{ id }] = await Promise.all([params, requireAdmin()]);
 
     const user = await getUserById(id);
     if (!user) {
@@ -43,8 +42,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
-    const { id } = await params;
-    await requireAdmin();
+    const [{ id }] = await Promise.all([params, requireAdmin()]);
 
     const body = await request.json();
     const updates = updateUserSchema.parse(body);
@@ -74,9 +72,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
 export async function DELETE(_request: NextRequest, { params }: RouteParams) {
   try {
-    const { id } = await params;
-    const session = await getSession();
-    await requireAdmin();
+    const [{ id }, session] = await Promise.all([params, requireAdmin()]);
 
     if (session?.userId === id) {
       return NextResponse.json(

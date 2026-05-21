@@ -6,6 +6,12 @@ import { verifyShareUnlockToken } from '@/lib/auth/share-unlock';
 import { buildShareAssetBasePath } from '@/lib/share-assets';
 import { PanoViewer } from '@/components/viewer/PanoViewer';
 import { SharePinGate } from '@/components/viewer/SharePinGate';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Shared Panorama',
+  description: 'Public panorama presentation',
+};
 
 interface PageProps {
   params: Promise<{ token: string }>;
@@ -32,7 +38,7 @@ export default async function PresentationPage({ params }: PageProps) {
   const config = await getProjectConfig(link.projectId);
   if (!config || config.panoramas.length === 0) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-black">
+      <div className="flex items-center justify-center min-h-screen bg-gray-950">
         <p className="text-white/60">Ten projekt nie ma jeszcze panoram</p>
       </div>
     );
@@ -41,7 +47,7 @@ export default async function PresentationPage({ params }: PageProps) {
   const basePath = buildShareAssetBasePath(token);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black">
+    <div className="fixed inset-0 z-50 bg-gray-950">
       <PanoViewer
         config={config}
         basePath={basePath}

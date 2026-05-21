@@ -55,7 +55,7 @@ export default async function AdminProjectsPage() {
         </div>
         <Link href="/admin/projects/new">
           <Button>
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="size-4 mr-2" />
             Nowy projekt
           </Button>
         </Link>
@@ -66,7 +66,7 @@ export default async function AdminProjectsPage() {
           <p className="text-muted-foreground">Brak projektów</p>
           <Link href="/admin/projects/new">
             <Button variant="outline" className="mt-4">
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="size-4 mr-2" />
               Utwórz pierwszy projekt
             </Button>
           </Link>

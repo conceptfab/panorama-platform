@@ -88,16 +88,15 @@ export async function ensurePanoramaVariantsForProject(
       height: sourceHeight,
     });
 
-    nextVariants.sort((a, b) => a.width - b.width);
-    const currentVariants = [...(panorama.variants ?? [])].sort(
+    const sortedNextVariants = nextVariants.toSorted((a, b) => a.width - b.width);
+    const currentVariants = (panorama.variants ?? []).toSorted(
       (a, b) => a.width - b.width
     );
-    if (!variantsEqual(currentVariants, nextVariants)) {
-      panorama.variants = nextVariants;
+    if (!variantsEqual(currentVariants, sortedNextVariants)) {
+      panorama.variants = sortedNextVariants;
       changed = true;
     }
   }
 
   return { changed, generatedFiles, config };
 }
-

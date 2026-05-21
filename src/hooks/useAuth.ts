@@ -5,7 +5,7 @@ import {
   useEffect,
   useCallback,
   createContext,
-  useContext,
+  use,
 } from 'react';
 import { User } from '@/types';
 
@@ -23,7 +23,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function useAuth(): AuthContextType {
-  const context = useContext(AuthContext);
+  const context = use(AuthContext);
   if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }

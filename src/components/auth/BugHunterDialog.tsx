@@ -57,7 +57,7 @@ export function BugHunterDialog({ open, onOpenChange }: BugHunterDialogProps) {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Bug className="h-5 w-5" />
+            <Bug className="size-5" />
             Bug hunter
           </DialogTitle>
         </DialogHeader>

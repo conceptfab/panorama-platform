@@ -52,8 +52,10 @@ export async function POST(request: NextRequest) {
     const panoramasDir = path.join(projectDir, 'panoramas');
     const thumbnailsDir = path.join(projectDir, 'thumbnails');
 
-    await mkdir(panoramasDir, { recursive: true });
-    await mkdir(thumbnailsDir, { recursive: true });
+    await Promise.all([
+      mkdir(panoramasDir, { recursive: true }),
+      mkdir(thumbnailsDir, { recursive: true }),
+    ]);
 
     const config = await getProjectConfig(projectId);
     if (!config) {
@@ -61,10 +63,11 @@ export async function POST(request: NextRequest) {
     }
 
     const uploadedFiles: { name: string; panoramaId: string }[] = [];
+    const allowedTypes = new Set(ALLOWED_TYPES);
 
     for (const file of files) {
       // Validate file
-      if (!ALLOWED_TYPES.includes(file.type)) {
+      if (!allowedTypes.has(file.type)) {
         continue; // Skip invalid types
       }
 

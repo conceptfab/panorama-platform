@@ -64,7 +64,7 @@ export function ViewerControls({
         onClick={onHome}
         title="Powrót do startu"
       >
-        <Home className="h-5 w-5" />
+        <Home className="size-5" />
       </Button>
 
       <Button
@@ -75,8 +75,8 @@ export function ViewerControls({
         title={autoRotate ? 'Wyłącz auto-rotację' : 'Włącz auto-rotację'}
       >
         <RotateCw
-          className={`h-5 w-5 ${autoRotate ? 'animate-spin' : ''}`}
-          style={{ animationDuration: '3s' }}
+          className={`size-5 ${autoRotate ? 'animate-spin' : ''}`}
+          style={{ animationDuration: '900ms' }}
         />
       </Button>
 
@@ -87,7 +87,7 @@ export function ViewerControls({
         onClick={onScreenshot}
         title="Zrzut ekranu"
       >
-        <Camera className="h-5 w-5" />
+        <Camera className="size-5" />
       </Button>
 
       {isAdmin && onGenerateThumbnail && (
@@ -100,9 +100,9 @@ export function ViewerControls({
           title="Generuj miniaturkę z aktualnego widoku"
         >
           {isGeneratingThumbnail ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
+            <Loader2 className="size-5 animate-spin" />
           ) : (
-            <ImagePlus className="h-5 w-5" />
+            <ImagePlus className="size-5" />
           )}
         </Button>
       )}
@@ -115,9 +115,9 @@ export function ViewerControls({
         title={isFullscreen ? 'Wyjdź z pełnego ekranu' : 'Pełny ekran'}
       >
         {isFullscreen ? (
-          <Minimize className="h-5 w-5" />
+          <Minimize className="size-5" />
         ) : (
-          <Maximize className="h-5 w-5" />
+          <Maximize className="size-5" />
         )}
       </Button>
     </div>

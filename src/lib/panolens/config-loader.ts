@@ -35,21 +35,25 @@ export function convertLegacyConfig(legacy: LegacyPanoramaConfig): ProjectConfig
     }));
 
     const infospots =
-      legacy.infospots
-        ?.filter((i) => i.panoramaIndex === index && i.visible)
-        .map((info, infoIndex) => ({
-          id: `info-${index}-${infoIndex}`,
-          type: 'info' as const,
-          position: {
-            x: info.position[0],
-            y: info.position[1],
-            z: info.position[2],
-          },
-          title: info.hoverText,
-          description: info.clickText,
-          icon: 'info',
-          scale: 1.0,
-        })) || [];
+      legacy.infospots?.flatMap((info, infoIndex) =>
+        info.panoramaIndex === index && info.visible
+          ? [
+              {
+                id: `info-${index}-${infoIndex}`,
+                type: 'info' as const,
+                position: {
+                  x: info.position[0],
+                  y: info.position[1],
+                  z: info.position[2],
+                },
+                title: info.hoverText,
+                description: info.clickText,
+                icon: 'info',
+                scale: 1.0,
+              },
+            ]
+          : []
+      ) || [];
 
     return {
       id: `pano-${String(index).padStart(3, '0')}`,

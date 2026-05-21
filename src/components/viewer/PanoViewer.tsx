@@ -46,13 +46,15 @@ export function PanoViewer({
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<unknown>(null);
   const panoramasRef = useRef<unknown[]>([]);
+  const scriptsLoadedRef = useRef(false);
   const rotationCycleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
   const [isLoading, setIsLoading] = useState(true);
   const [loadProgress, setLoadProgress] = useState(0);
-  const [scriptsLoaded, setScriptsLoaded] = useState(false);
-  const [autoRotate, setAutoRotate] = useState(config.settings.autoRotate);
+  const [autoRotate, setAutoRotate] = useState(
+    () => config.settings.autoRotate
+  );
   const [threeLoaded, setThreeLoaded] = useState(false);
   const [currentPanoramaIndex, setCurrentPanoramaIndex] = useState(0);
   const [optimizedSizesByPanorama, setOptimizedSizesByPanorama] = useState<
@@ -135,6 +137,10 @@ export function PanoViewer({
     const selectedFiles: string[] = [];
 
     // Create panoramas in chunks to avoid blocking the main thread
+    const panoramaIndexById = new Map(
+      config.panoramas.map((panorama, index) => [panorama.id, index])
+    );
+
     for (let index = 0; index < config.panoramas.length; index++) {
       const panoData = config.panoramas[index];
       const selectedVariant = resolvePanoramaVariant(
@@ -144,13 +150,6 @@ export function PanoViewer({
       );
       selectedFiles[index] = selectedVariant.file;
       const imagePath = `${basePath}/panoramas/${selectedVariant.file}`;
-
-      // Let the browser breathe and render SplashScreen
-      if (index > 0) {
-        await new Promise((resolve) =>
-          requestAnimationFrame(() => setTimeout(resolve, 0)),
-        );
-      }
 
       const panorama = new PANOLENS.ImagePanorama(imagePath);
       resolvedSizes[index] =
@@ -168,9 +167,7 @@ export function PanoViewer({
 
       panoData.hotspots.forEach((hotspot) => {
         if (hotspot.type === 'link') {
-          const targetIndex = config.panoramas.findIndex(
-            (p) => p.id === hotspot.target,
-          );
+          const targetIndex = panoramaIndexById.get(hotspot.target) ?? -1;
           if (targetIndex !== -1) {
             const hColor = hotspot.color || '#22d3ee';
             const customLinkIcon =
@@ -304,14 +301,6 @@ export function PanoViewer({
       }, config.settings.splashDuration);
     }, 50);
   }, [config, basePath, applyRandomAutoRotate, scheduleNextRotation]);
-
-  useEffect(() => {
-    if (scriptsLoaded) {
-      // Small delay to ensure scripts are ready
-      const timer = setTimeout(initViewer, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [scriptsLoaded, initViewer]);
 
   useEffect(() => {
     return () => {
@@ -658,11 +647,14 @@ export function PanoViewer({
         <Script
           src="/panolens/panolens.min.js"
           strategy="afterInteractive"
-          onLoad={() => setScriptsLoaded(true)}
+          onLoad={() => {
+            scriptsLoadedRef.current = true;
+            setTimeout(initViewer, 100);
+          }}
         />
       )}
 
-      <div className="relative w-full h-screen bg-black">
+      <div className="relative w-full h-screen bg-gray-950">
         <div
           ref={containerRef}
           id="panorama-container"
@@ -678,9 +670,9 @@ export function PanoViewer({
             <Button
               variant="secondary"
               size="icon"
-              className="bg-black/50 hover:bg-black/70 text-white border-0 h-10 w-10"
+              className="bg-black/50 hover:bg-black/70 text-white border-0 size-10"
             >
-              <ArrowLeft className="h-5 w-5" />
+              <ArrowLeft className="size-5" />
             </Button>
           </Link>
         )}

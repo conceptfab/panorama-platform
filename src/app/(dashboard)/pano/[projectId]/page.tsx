@@ -57,7 +57,7 @@ export default async function PanoPage({ params }: PageProps) {
   const isAdmin = session.role === 'admin';
 
   return (
-    <div className="fixed inset-0 z-50 bg-black -m-[inherit]">
+    <div className="fixed inset-0 z-50 bg-gray-950 -m-[inherit]">
       <PanoViewer
         config={config}
         basePath={basePath}

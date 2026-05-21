@@ -13,9 +13,10 @@ interface RouteParams {
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
-    const session = await requireAdminOrEditor();
-
-    const { id: projectId } = await params;
+    const [session, { id: projectId }] = await Promise.all([
+      requireAdminOrEditor(),
+      params,
+    ]);
     const project = await getProjectById(projectId);
 
     if (!project) {

@@ -34,15 +34,16 @@ export async function getProjectsWithExistingFolders(): Promise<Project[]> {
   let dirIds: string[];
   try {
     const entries = await fs.readdir(UPLOADS_DIR, { withFileTypes: true });
-    dirIds = entries.filter((e) => e.isDirectory()).map((e) => e.name);
+    dirIds = entries.flatMap((e) => (e.isDirectory() ? [e.name] : []));
   } catch {
     dirIds = [];
   }
   const projects = await getProjects();
   const byId = new Map(projects.map((p) => [p.id, p]));
-  return dirIds
-    .map((id) => byId.get(id))
-    .filter((p): p is Project => p != null);
+  return dirIds.flatMap((id) => {
+    const project = byId.get(id);
+    return project ? [project] : [];
+  });
 }
 
 export async function getProjectById(id: string): Promise<Project | null> {
@@ -73,9 +74,10 @@ function ensureUniqueProjectSlug(
   existingIds: string[],
   baseSlug: string
 ): string {
-  if (!existingIds.includes(baseSlug)) return baseSlug;
+  const existingIdSet = new Set(existingIds);
+  if (!existingIdSet.has(baseSlug)) return baseSlug;
   let n = 2;
-  while (existingIds.includes(`${baseSlug}-${n}`)) n++;
+  while (existingIdSet.has(`${baseSlug}-${n}`)) n++;
   return `${baseSlug}-${n}`;
 }
 
@@ -270,7 +272,7 @@ export async function renameProjectAndId(
 
   const original = projects[index];
 
-  const existingIds = projects.map((p) => p.id).filter(id => id !== oldId);
+  const existingIds = projects.flatMap((p) => (p.id !== oldId ? [p.id] : []));
   const baseSlug = projectSlugFromName(newName, newDescription) || generateId('proj');
   const newId = ensureUniqueProjectSlug(existingIds, baseSlug);
 
@@ -436,7 +438,7 @@ export async function rebuildProjects(): Promise<RebuildProjectsResult> {
   let dirIds: string[];
   try {
     const entries = await fs.readdir(UPLOADS_DIR, { withFileTypes: true });
-    dirIds = entries.filter((e) => e.isDirectory()).map((e) => e.name);
+    dirIds = entries.flatMap((e) => (e.isDirectory() ? [e.name] : []));
   } catch {
     dirIds = [];
   }

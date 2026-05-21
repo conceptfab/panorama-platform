@@ -13,7 +13,7 @@ export function SplashScreen({
 }: SplashScreenProps) {
   return (
     <div
-      className="absolute inset-0 z-50 flex items-center justify-center bg-black transition-opacity"
+      className="absolute inset-0 z-50 flex items-center justify-center bg-gray-950 transition-opacity"
       style={{
         transitionDuration: `${fadeDuration}ms`,
       }}
@@ -48,7 +48,7 @@ export function SplashScreen({
           />
         </div>
         <p className="text-zinc-500 text-sm mt-4 w-full text-center animate-pulse">
-          Ładowanie panoram...
+          Ładowanie panoram…
         </p>
       </div>
     </div>

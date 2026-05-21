@@ -20,9 +20,10 @@ export async function syncGroupsProjectIdsFromProjects(): Promise<void> {
 
   // Modyfikuj w pamięci
   for (const group of groups) {
-    group.projectIds = projects
-      .filter((p) => p.groupIds.includes(group.id))
-      .map((p) => p.id);
+    const groupId = group.id;
+    group.projectIds = projects.flatMap((p) =>
+      new Set(p.groupIds).has(groupId) ? [p.id] : []
+    );
   }
 
   // Jeden zapis
@@ -44,11 +45,13 @@ export async function syncGroupProjectIdsToProjects(
   );
 
   const projects = projectsData.projects;
+  const selectedProjectIds = new Set(projectIds);
   let modified = false;
 
   for (const project of projects) {
-    const hasGroup = project.groupIds.includes(groupId);
-    const shouldHaveGroup = projectIds.includes(project.id);
+    const projectGroupIds = new Set(project.groupIds);
+    const hasGroup = projectGroupIds.has(groupId);
+    const shouldHaveGroup = selectedProjectIds.has(project.id);
 
     if (hasGroup && !shouldHaveGroup) {
       project.groupIds = project.groupIds.filter((id) => id !== groupId);
@@ -81,7 +84,8 @@ export async function removeGroupFromAllProjects(
   let modified = false;
 
   for (const project of projects) {
-    if (project.groupIds.includes(groupId)) {
+    const projectGroupIds = new Set(project.groupIds);
+    if (projectGroupIds.has(groupId)) {
       project.groupIds = project.groupIds.filter((id) => id !== groupId);
       modified = true;
     }

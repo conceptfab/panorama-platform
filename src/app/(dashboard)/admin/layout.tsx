@@ -18,8 +18,8 @@ export default async function AdminLayout({
   if (session.role !== 'admin' && session.role !== 'editor') {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center px-4">
-        <ShieldX className="h-16 w-16 text-amber-500 mb-4" />
-        <h1 className="text-2xl font-bold text-center mb-2">Brak uprawnień</h1>
+        <ShieldX className="size-16 text-amber-500 mb-4" />
+        <h1 className="text-2xl font-semibold text-center mb-2">Brak uprawnień</h1>
         <p className="text-muted-foreground text-center mb-6 max-w-md">
           Ten panel jest dostępny tylko dla administratorów i edytorów.
         </p>

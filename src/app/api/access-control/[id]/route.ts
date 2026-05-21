@@ -8,8 +8,7 @@ interface RouteParams {
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
-    const { id } = await params;
-    await requireAdmin();
+    const [{ id }] = await Promise.all([params, requireAdmin()]);
 
     const success = await removeAccessRule(id);
     if (!success) {
@@ -30,8 +29,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
-    const { id } = await params;
-    await requireAdmin();
+    const [{ id }] = await Promise.all([params, requireAdmin()]);
 
     const success = await toggleAccessRule(id);
     if (!success) {

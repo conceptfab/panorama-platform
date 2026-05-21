@@ -37,9 +37,9 @@ export async function POST(request: NextRequest) {
       await addToPending(email);
       // Powiadom adminów mailem
       const users = await getUsers();
-      const adminEmails = users
-        .filter((u) => u.role === 'admin' && u.isActive)
-        .map((u) => u.email);
+      const adminEmails = users.flatMap((u) =>
+        u.role === 'admin' && u.isActive ? [u.email] : []
+      );
       await sendPendingRequestNotificationToAdmins(adminEmails, email);
       return NextResponse.json({
         success: true,

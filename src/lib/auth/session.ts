@@ -5,13 +5,14 @@ import { User } from '@/types';
 const SESSION_COOKIE_NAME = 'panorama-session';
 
 export async function createSession(user: User): Promise<string> {
-  const token = await createSessionToken({
-    userId: user.id,
-    email: user.email,
-    role: user.role,
-  });
-
-  const cookieStore = await cookies();
+  const [token, cookieStore] = await Promise.all([
+    createSessionToken({
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+    }),
+    cookies(),
+  ]);
   cookieStore.set(SESSION_COOKIE_NAME, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',

@@ -26,7 +26,7 @@ export function ProjectDownloadCard({ project, size }: ProjectDownloadCardProps)
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <HardDrive className="h-5 w-5" />
+          <HardDrive className="size-5" />
           Pliki projektu
         </CardTitle>
       </CardHeader>
@@ -36,7 +36,7 @@ export function ProjectDownloadCard({ project, size }: ProjectDownloadCardProps)
             Rozmiar: <span className="font-medium text-foreground">{formatFileSize(size)}</span>
           </div>
           <Button onClick={handleDownload} className="gap-2">
-            <Download className="h-4 w-4" />
+            <Download className="size-4" />
             Pobierz ZIP
           </Button>
         </div>

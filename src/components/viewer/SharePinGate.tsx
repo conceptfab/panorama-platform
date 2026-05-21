@@ -39,7 +39,7 @@ export function SharePinGate({ token, projectName }: SharePinGateProps) {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-black px-4">
+    <div className="flex items-center justify-center min-h-screen bg-gray-950 px-4">
       <form
         onSubmit={submit}
         className="w-full max-w-sm space-y-4 rounded-lg border border-white/15 bg-white/5 p-6 backdrop-blur"
@@ -59,14 +59,13 @@ export function SharePinGate({ token, projectName }: SharePinGateProps) {
             type="password"
             value={pin}
             onChange={(e) => setPin(e.target.value)}
-            autoFocus
             required
           />
         </div>
         {error && <p className="text-sm text-red-400">Nieprawidłowy PIN.</p>}
         <Button type="submit" className="w-full" disabled={loading || !pin}>
           {loading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Loader2 className="size-4 animate-spin" />
           ) : (
             'Otwórz prezentację'
           )}

@@ -71,8 +71,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
-    const { id } = await params;
-    const session = await requireAdminOrEditor();
+    const [{ id }, session] = await Promise.all([
+      params,
+      requireAdminOrEditor(),
+    ]);
 
     const body = await request.json();
     const updates = updateProjectSchema.parse(body);
@@ -169,8 +171,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
-    const { id } = await params;
-    const session = await requireAdminOrEditor();
+    const [{ id }, session] = await Promise.all([
+      params,
+      requireAdminOrEditor(),
+    ]);
 
     const project = await getProjectById(id);
     if (!project) {

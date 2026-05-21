@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Panorama, Project } from '@/types';
+import { ClientDate } from '@/components/ui/client-date';
 import {
   Card,
   CardContent,
@@ -79,33 +80,33 @@ const sizeConfig: Record<
     titleSize: 'text-lg',
     descSize: 'text-sm',
     badgeSize: 'text-xs',
-    iconSize: 'h-4 w-4',
-    placeholderIcon: 'h-12 w-12',
+    iconSize: 'size-4',
+    placeholderIcon: 'size-12',
     showDescription: true,
     showDate: true,
-    menuButtonSize: 'h-8 w-8',
+    menuButtonSize: 'size-8',
   },
   medium: {
     padding: 'p-3',
     titleSize: 'text-base',
     descSize: 'text-xs',
     badgeSize: 'text-xs',
-    iconSize: 'h-4 w-4',
-    placeholderIcon: 'h-10 w-10',
+    iconSize: 'size-4',
+    placeholderIcon: 'size-10',
     showDescription: true,
     showDate: true,
-    menuButtonSize: 'h-7 w-7',
+    menuButtonSize: 'size-7',
   },
   small: {
     padding: 'p-2',
     titleSize: 'text-sm',
     descSize: 'text-xs',
     badgeSize: 'text-[10px]',
-    iconSize: 'h-3 w-3',
-    placeholderIcon: 'h-8 w-8',
+    iconSize: 'size-3',
+    placeholderIcon: 'size-8',
     showDescription: false,
     showDate: false,
-    menuButtonSize: 'h-6 w-6',
+    menuButtonSize: 'size-6',
   },
 };
 
@@ -115,7 +116,7 @@ export function ProjectCard({
   groups: groupsProp,
   disableDownload = false,
 }: ProjectCardProps) {
-  const router = useRouter();
+  const { refresh } = useRouter();
   const config = sizeConfig[size];
   const groups = groupsProp ?? [];
   const [replaceDialogOpen, setReplaceDialogOpen] = useState(false);
@@ -146,8 +147,8 @@ export function ProjectCard({
         if (!res.ok) {
           throw new Error('Nie udało się pobrać panoram');
         }
-        const data = await res.json();
         if (!isActive) return;
+        const data = await res.json();
         setPanoramasForReplace(data.panoramas ?? []);
         setReplaceFiles({});
       })
@@ -197,7 +198,7 @@ export function ProjectCard({
         data.message ?? 'Panoramy zostały zastąpione i trafiły do poczekalni'
       );
       setReplaceDialogOpen(false);
-      router.refresh();
+      refresh();
     } catch (err) {
       setReplaceError(
         err instanceof Error ? err.message : 'Nie udało się zastąpić panoram'
@@ -205,7 +206,7 @@ export function ProjectCard({
     } finally {
       setIsReplacingPanoramas(false);
     }
-  }, [project.id, replaceFiles, router, selectedFileCount]);
+  }, [project.id, refresh, replaceFiles, selectedFileCount]);
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -225,7 +226,7 @@ export function ProjectCard({
         throw new Error(data.error || 'Błąd usuwania');
       }
       toast.success(`Projekt „${project.name}" został usunięty.`);
-      router.refresh();
+      refresh();
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : 'Nie udało się usunąć projektu'
@@ -255,7 +256,7 @@ export function ProjectCard({
       toast.success(
         data.message ?? `Projekt „${project.name}" został sklonowany.`
       );
-      router.refresh();
+      refresh();
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : 'Nie udało się sklonować projektu'
@@ -274,9 +275,9 @@ export function ProjectCard({
               style={{ backgroundColor: groups[0].color }}
             />
           ) : (
-            groups.map((g, i) => (
+            groups.map((g) => (
               <div
-                key={i}
+                key={g.id}
                 className="flex-1 min-w-0 first:rounded-l last:rounded-r"
                 style={{ backgroundColor: g.color }}
               />
@@ -290,6 +291,7 @@ export function ProjectCard({
             src={project.thumbnailUrl}
             alt={project.name}
             fill
+            sizes="(max-width: 768px) 100vw, 24rem"
             className="object-cover"
           />
         ) : (
@@ -353,19 +355,19 @@ export function ProjectCard({
             <DropdownMenuContent align="end">
               <DropdownMenuItem asChild>
                 <Link href={`/pano/${project.id}`}>
-                  <Eye className="h-4 w-4 mr-2" />
+                  <Eye className="size-4 mr-2" />
                   Podgląd
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href={`/admin/projects/${project.id}`}>
-                  <Pencil className="h-4 w-4 mr-2" />
+                  <Pencil className="size-4 mr-2" />
                   Edytuj
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href={`/admin/projects/${project.id}/editor`}>
-                  <Crosshair className="h-4 w-4 mr-2" />
+                  <Crosshair className="size-4 mr-2" />
                   Edytor hotspotów
                 </Link>
               </DropdownMenuItem>
@@ -373,7 +375,7 @@ export function ProjectCard({
                 disabled={disableDownload}
                 onClick={disableDownload ? undefined : handleDownload}
               >
-                <Download className="h-4 w-4 mr-2" />
+                <Download className="size-4 mr-2" />
                 Pobierz projekt
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -381,14 +383,14 @@ export function ProjectCard({
                 disabled={disableDownload}
                 onClick={disableDownload ? undefined : handleClone}
               >
-                <Copy className="h-4 w-4 mr-2" />
+                <Copy className="size-4 mr-2" />
                 Klonuj projekt
               </DropdownMenuItem>
               <DropdownMenuItem
                 disabled={disableDownload}
                 onClick={disableDownload ? undefined : openReplaceDialog}
               >
-                <Repeat className="h-4 w-4 mr-2" />
+                <Repeat className="size-4 mr-2" />
                 Zastąp panoramy
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -396,7 +398,7 @@ export function ProjectCard({
                 disabled={disableDownload}
                 onClick={disableDownload ? undefined : handleDelete}
               >
-                <Trash2 className="h-4 w-4 mr-2" />
+                <Trash2 className="size-4 mr-2" />
                 Usuń
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -418,7 +420,7 @@ export function ProjectCard({
             <>
               <span>•</span>
               <span>
-                {new Date(project.updatedAt).toLocaleDateString('pl-PL')}
+                <ClientDate value={project.updatedAt} />
               </span>
             </>
           )}
@@ -426,7 +428,7 @@ export function ProjectCard({
         {(size === 'large' || size === 'medium') && groups.length > 0 && (
           <p className="mt-1 text-xs text-muted-foreground truncate flex flex-wrap gap-x-1.5 gap-y-0.5">
             {groups.map((g, i) => (
-              <span key={i} style={{ color: g.color }}>
+              <span key={g.id} style={{ color: g.color }}>
                 {g.name}
                 {i < groups.length - 1 ? ',' : ''}
               </span>
@@ -510,7 +512,7 @@ export function ProjectCard({
                             onClick={() => handleFileInput(pano.id, null)}
                             className="text-muted-foreground hover:text-foreground"
                           >
-                            <X className="h-3 w-3" />
+                            <X className="size-3" />
                           </Button>
                         )}
                       </div>

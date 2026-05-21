@@ -14,8 +14,7 @@ interface RouteParams {
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    await requireAdmin();
-    const { id } = await params;
+    const [, { id }] = await Promise.all([requireAdmin(), params]);
 
     const project = await getProjectById(id);
     if (!project) {

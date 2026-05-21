@@ -19,7 +19,7 @@ interface UploadFile {
 }
 
 export function FileUploader({ projectId }: FileUploaderProps) {
-  const router = useRouter();
+  const { refresh } = useRouter();
   const [files, setFiles] = useState<UploadFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -48,13 +48,17 @@ export function FileUploader({ projectId }: FileUploaderProps) {
   };
 
   const addFiles = useCallback((newFiles: FileList) => {
-    const validFiles = Array.from(newFiles)
-      .filter(validateFile)
-      .map((file) => ({
-        file,
-        status: 'pending' as const,
-        progress: 0,
-      }));
+    const validFiles = Array.from(newFiles).flatMap((file) =>
+      validateFile(file)
+        ? [
+            {
+              file,
+              status: 'pending' as const,
+              progress: 0,
+            },
+          ]
+        : []
+    );
 
     setFiles((prev) => [...prev, ...validFiles]);
   }, []);
@@ -124,7 +128,7 @@ export function FileUploader({ projectId }: FileUploaderProps) {
       );
 
       toast.success(`Przesłano ${data.uploadedFiles.length} plików`);
-      router.refresh();
+      refresh();
     } catch {
       setFiles((prev) =>
         prev.map((f) =>
@@ -164,11 +168,11 @@ export function FileUploader({ projectId }: FileUploaderProps) {
           onDragOver={handleDrag}
           onDrop={handleDrop}
         >
-          <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
+          <Upload className="size-10 mx-auto text-muted-foreground mb-4" />
           <p className="text-sm text-muted-foreground mb-2">
             Przeciągnij i upuść panoramy tutaj lub
           </p>
-          <label>
+          <label aria-label="Wybierz pliki">
             <input
               type="file"
               className="hidden"
@@ -189,9 +193,9 @@ export function FileUploader({ projectId }: FileUploaderProps) {
 
         {files.length > 0 && (
           <div className="space-y-2">
-            {files.map((f, index) => (
+            {files.map((f) => (
               <div
-                key={index}
+                key={`${f.file.name}-${f.file.size}-${f.file.lastModified}`}
                 className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg"
               >
                 <div className="flex-1 min-w-0">
@@ -204,10 +208,10 @@ export function FileUploader({ projectId }: FileUploaderProps) {
                   <Progress value={50} className="w-24" />
                 )}
                 {f.status === 'success' && (
-                  <CheckCircle className="h-5 w-5 text-green-500" />
+                  <CheckCircle className="size-5 text-green-500" />
                 )}
                 {f.status === 'error' && (
-                  <AlertCircle className="h-5 w-5 text-red-500" />
+                  <AlertCircle className="size-5 text-red-500" />
                 )}
                 {f.status === 'pending' && (
                   <Button
@@ -215,7 +219,7 @@ export function FileUploader({ projectId }: FileUploaderProps) {
                     size="icon"
                     onClick={() => removeFile(index)}
                   >
-                    <X className="h-4 w-4" />
+                    <X className="size-4" />
                   </Button>
                 )}
               </div>

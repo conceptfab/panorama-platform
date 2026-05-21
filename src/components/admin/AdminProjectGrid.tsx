@@ -64,8 +64,9 @@ export function AdminProjectGrid({
     const assignedIds = new Set<string>();
 
     for (const group of groups) {
+      const groupProjectIds = new Set(group.projectIds);
       const groupProjects = projects.filter(
-        (p) => p.groupIds.includes(group.id) && !assignedIds.has(p.id)
+        (p) => groupProjectIds.has(p.id) && !assignedIds.has(p.id)
       );
       groupProjects.forEach((p) => assignedIds.add(p.id));
       if (groupProjects.length > 0) {
@@ -99,10 +100,10 @@ export function AdminProjectGrid({
   const getProjectGroups = (project: Project) =>
     hideGroups
       ? []
-      : (project.groupIds ?? [])
-          .map((id) => groupMap.get(id))
-          .filter((g): g is Group => g != null)
-          .map((g) => ({ name: g.name, color: g.color }));
+      : (project.groupIds ?? []).flatMap((id) => {
+          const group = groupMap.get(id);
+          return group ? [{ name: group.name, color: group.color }] : [];
+        });
 
   if (!mounted) {
     return (
@@ -138,10 +139,10 @@ export function AdminProjectGrid({
               variant={isActive ? 'default' : 'outline'}
               size="sm"
               onClick={() => handleSizeChange(size)}
-              className={cn('h-8 w-8 p-0', isActive && 'pointer-events-none')}
+              className={cn('size-8 p-0', isActive && 'pointer-events-none')}
               title={config.label}
             >
-              <Icon className="h-4 w-4" />
+              <Icon className="size-4" />
             </Button>
           );
         })}
@@ -157,7 +158,7 @@ export function AdminProjectGrid({
                 style={group.color ? { color: group.color } : undefined}
               >
                 <span
-                  className="inline-block w-2 h-2 rounded-full shrink-0"
+                  className="inline-block size-2 rounded-full shrink-0"
                   style={{ backgroundColor: group.color }}
                   aria-hidden
                 />

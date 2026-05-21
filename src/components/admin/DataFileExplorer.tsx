@@ -91,11 +91,11 @@ function Panel({
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 shrink-0"
+          className="size-8 shrink-0"
           onClick={onRefresh}
           disabled={loading}
         >
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`size-4 ${loading ? 'animate-spin' : ''}`} />
         </Button>
       </CardHeader>
       <div className="px-2 py-1 bg-muted/50 text-xs font-mono truncate border-b">
@@ -116,14 +116,19 @@ function Panel({
                   key={entry.name + (entry.type === 'file' ? entry.size : '')}
                   className={`flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-muted/80 ${
                     isSelected ? 'bg-muted' : ''
-                  }`}
-                  onDoubleClick={() => handleDoubleClick(entry)}
-                  onClick={() => {}}
-                >
+	                  }`}
+	                  onDoubleClick={() => handleDoubleClick(entry)}
+	                  onClick={() => {}}
+	                  onKeyDown={(event) => {
+	                    if (event.key === 'Enter') handleDoubleClick(entry);
+	                  }}
+	                  role="button"
+	                  tabIndex={0}
+	                >
                   {entry.type === 'dir' ? (
-                    <FolderOpen className="h-4 w-4 text-amber-500 shrink-0" />
+                    <FolderOpen className="size-4 text-amber-500 shrink-0" />
                   ) : (
-                    <FileText className="h-4 w-4 text-blue-400 shrink-0" />
+                    <FileText className="size-4 text-blue-400 shrink-0" />
                   )}
                   <span className="truncate flex-1">
                     {isParent ? '..' : entry.name}
@@ -294,7 +299,7 @@ export function DataFileExplorer() {
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold flex items-center gap-2">
-          <FileCode className="h-5 w-5" />
+          <FileCode className="size-5" />
           Menedżer plików
         </h2>
         <p className="text-sm text-muted-foreground">
@@ -338,7 +343,7 @@ export function DataFileExplorer() {
         <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
+              <FileText className="size-5" />
               {previewName} – edycja
             </DialogTitle>
           </DialogHeader>
@@ -361,7 +366,7 @@ export function DataFileExplorer() {
                 );
               }}
             >
-              <Download className="h-4 w-4 mr-1" />
+              <Download className="size-4 mr-1" />
               Pobierz
             </Button>
             <Button
@@ -395,7 +400,7 @@ export function DataFileExplorer() {
                 }
               }}
             >
-              <Save className="h-4 w-4 mr-1" />
+              <Save className="size-4 mr-1" />
               {saving ? 'Zapisywanie…' : 'Zapisz'}
             </Button>
           </div>

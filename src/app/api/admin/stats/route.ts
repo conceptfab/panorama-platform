@@ -60,32 +60,39 @@ export async function GET(request: NextRequest) {
       totalEvents: number;
     }[] = [];
 
-    for (const user of users) {
-      const userDates = await getStatsDaysForUser(user.id);
-      if (userDates.length === 0) continue;
+    const userStats = await Promise.all(
+      users.map(async (user) => {
+        const userDates = await getStatsDaysForUser(user.id);
+        if (userDates.length === 0) return null;
 
-      let totalEvents = 0;
-      for (const d of userDates) {
-        const day = await getStatsDay(user.id, d);
-        if (day) totalEvents += day.events.length;
-      }
+        const days = await Promise.all(
+          userDates.map((date) => getStatsDay(user.id, date))
+        );
+        const totalEvents = days.reduce(
+          (total, day) => total + (day?.events.length ?? 0),
+          0
+        );
 
-      result.push({
-        userId: user.id,
-        email: user.email,
-        days: userDates,
-        totalEvents,
-      });
-    }
+        return {
+          userId: user.id,
+          email: user.email,
+          days: userDates,
+          totalEvents,
+        };
+      })
+    );
+    result.push(...userStats.flatMap((item) => (item ? [item] : [])));
 
     // Kubełek anonimowych wejść z linków współdzielenia
     const shareDates = await getStatsDaysForUser('share');
     if (shareDates.length > 0) {
-      let shareTotal = 0;
-      for (const d of shareDates) {
-        const day = await getStatsDay('share', d);
-        if (day) shareTotal += day.events.length;
-      }
+      const shareDays = await Promise.all(
+        shareDates.map((date) => getStatsDay('share', date))
+      );
+      const shareTotal = shareDays.reduce(
+        (total, day) => total + (day?.events.length ?? 0),
+        0
+      );
       result.push({
         userId: 'share',
         email: 'Linki publiczne (anonimowo)',

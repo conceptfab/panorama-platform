@@ -27,7 +27,7 @@ export function GroupManager({
   groups: initialGroups,
   projects,
 }: GroupManagerProps) {
-  const [groups, setGroups] = useState(initialGroups);
+  const [groups, setGroups] = useState(() => initialGroups);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingGroup, setEditingGroup] = useState<Group | null>(null);
   const [name, setName] = useState('');
@@ -36,9 +36,11 @@ export function GroupManager({
   const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
 
   const getProjectNames = (projectIds: string[]) => {
-    return projectIds
-      .map((id) => projects.find((p) => p.id === id)?.name)
-      .filter(Boolean);
+    const projectById = new Map(projects.map((project) => [project.id, project]));
+    return projectIds.flatMap((id) => {
+      const project = projectById.get(id);
+      return project ? [project.name] : [];
+    });
   };
 
   const handleOpenDialog = (group?: Group) => {
@@ -147,7 +149,7 @@ export function GroupManager({
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={() => handleOpenDialog()}>
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="size-4 mr-2" />
               Nowa grupa
             </Button>
           </DialogTrigger>
@@ -215,7 +217,7 @@ export function GroupManager({
                           type="checkbox"
                           checked={selectedProjectIds.includes(project.id)}
                           onChange={() => toggleProject(project.id)}
-                          className="h-4 w-4 rounded border-input"
+                          className="size-4 rounded border-input"
                         />
                         <span className="text-sm truncate">{project.name}</span>
                       </label>
@@ -246,7 +248,7 @@ export function GroupManager({
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2">
                   <div
-                    className="w-4 h-4 rounded-full"
+                    className="size-4 rounded-full"
                     style={{ backgroundColor: group.color }}
                   />
                   <CardTitle className="text-lg">{group.name}</CardTitle>
@@ -255,18 +257,18 @@ export function GroupManager({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8"
+                    className="size-8"
                     onClick={() => handleOpenDialog(group)}
                   >
-                    <Pencil className="h-4 w-4" />
+                    <Pencil className="size-4" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-red-500"
+                    className="size-8 text-red-500"
                     onClick={() => handleDelete(group.id)}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="size-4" />
                   </Button>
                 </div>
               </div>
@@ -276,8 +278,8 @@ export function GroupManager({
                 {group.description || 'Brak opisu'}
               </p>
               <div className="flex flex-wrap gap-1">
-                {getProjectNames(group.projectIds).map((name, i) => (
-                  <Badge key={i} variant="secondary" className="text-xs">
+                {getProjectNames(group.projectIds).map((name) => (
+                  <Badge key={name} variant="secondary" className="text-xs">
                     {name}
                   </Badge>
                 ))}

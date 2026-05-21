@@ -45,14 +45,18 @@ export async function GET(request: NextRequest) {
       })
     );
 
-    const entries: BrowseEntry[] = statsResults
-      .filter((s): s is { name: string; stat: Stats } => s !== null)
-      .map(({ name, stat: s }) => ({
-        name,
-        type: s.isDirectory() ? 'dir' : 'file',
-        size: s.isDirectory() ? undefined : s.size,
-        mtime: s.mtime.toISOString(),
-      }));
+    const entries: BrowseEntry[] = statsResults.flatMap((result) => {
+      if (result === null) return [];
+      const { name, stat: s } = result;
+      return [
+        {
+          name,
+          type: s.isDirectory() ? 'dir' : 'file',
+          size: s.isDirectory() ? undefined : s.size,
+          mtime: s.mtime.toISOString(),
+        },
+      ];
+    });
 
     entries.sort((a, b) => {
       if (a.type !== b.type) return a.type === 'dir' ? -1 : 1;

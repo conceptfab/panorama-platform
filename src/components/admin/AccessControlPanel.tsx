@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { ClientDate } from '@/components/ui/client-date';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Trash2, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -14,10 +15,53 @@ interface AccessControlPanelProps {
   accessControl: AccessControl;
 }
 
+interface RuleListProps {
+  rules: AccessRule[];
+  type: 'whitelist' | 'blacklist';
+  onDeleteRule: (id: string, type: 'whitelist' | 'blacklist') => void;
+}
+
+function RuleList({ rules, type, onDeleteRule }: RuleListProps) {
+  return (
+    <div className="space-y-2">
+      {rules.map((rule) => (
+        <div
+          key={rule.id}
+          className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+        >
+          <div>
+            <code className="font-mono text-sm">{rule.pattern}</code>
+            {rule.notes && (
+              <p className="text-xs text-muted-foreground mt-1">{rule.notes}</p>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant={rule.isActive ? 'default' : 'secondary'}>
+              {rule.isActive ? 'Aktywna' : 'Nieaktywna'}
+            </Badge>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onDeleteRule(rule.id, type)}
+            >
+              <Trash2 className="size-4" />
+            </Button>
+          </div>
+        </div>
+      ))}
+      {rules.length === 0 && (
+        <p className="text-sm text-muted-foreground text-center py-4">
+          Brak reguł
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function AccessControlPanel({
   accessControl: initialData,
 }: AccessControlPanelProps) {
-  const [accessControl, setAccessControl] = useState(initialData);
+  const [accessControl, setAccessControl] = useState(() => initialData);
   const [newWhitelistPattern, setNewWhitelistPattern] = useState('');
   const [newBlacklistPattern, setNewBlacklistPattern] = useState('');
   const [pendingAction, setPendingAction] = useState<string | null>(null);
@@ -109,47 +153,6 @@ export function AccessControlPanel({
     }
   };
 
-  const RuleList = ({
-    rules,
-    type,
-  }: {
-    rules: AccessRule[];
-    type: 'whitelist' | 'blacklist';
-  }) => (
-    <div className="space-y-2">
-      {rules.map((rule) => (
-        <div
-          key={rule.id}
-          className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
-        >
-          <div>
-            <code className="font-mono text-sm">{rule.pattern}</code>
-            {rule.notes && (
-              <p className="text-xs text-muted-foreground mt-1">{rule.notes}</p>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge variant={rule.isActive ? 'default' : 'secondary'}>
-              {rule.isActive ? 'Aktywna' : 'Nieaktywna'}
-            </Badge>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => handleDeleteRule(rule.id, type)}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      ))}
-      {rules.length === 0 && (
-        <p className="text-sm text-muted-foreground text-center py-4">
-          Brak reguł
-        </p>
-      )}
-    </div>
-  );
-
   return (
     <Card>
       <CardHeader>
@@ -184,7 +187,7 @@ export function AccessControlPanel({
                     <span className="font-medium">{req.email}</span>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       Prośba:{' '}
-                      {new Date(req.requestedAt).toLocaleString('pl-PL')}
+                      <ClientDate value={req.requestedAt} format="dateTime" />
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -193,7 +196,7 @@ export function AccessControlPanel({
                       onClick={() => handlePendingAction(req.email, 'approve')}
                       disabled={pendingAction === req.email}
                     >
-                      <Check className="h-4 w-4 mr-1" />
+                      <Check className="size-4 mr-1" />
                       Zatwierdź
                     </Button>
                     <Button
@@ -202,7 +205,7 @@ export function AccessControlPanel({
                       onClick={() => handlePendingAction(req.email, 'reject')}
                       disabled={pendingAction === req.email}
                     >
-                      <X className="h-4 w-4 mr-1" />
+                      <X className="size-4 mr-1" />
                       Odrzuć
                     </Button>
                   </div>
@@ -224,11 +227,15 @@ export function AccessControlPanel({
                 onChange={(e) => setNewWhitelistPattern(e.target.value)}
               />
               <Button onClick={() => handleAddRule('whitelist')}>
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="size-4 mr-2" />
                 Dodaj
               </Button>
             </div>
-            <RuleList rules={accessControl.whitelist} type="whitelist" />
+            <RuleList
+              rules={accessControl.whitelist}
+              type="whitelist"
+              onDeleteRule={handleDeleteRule}
+            />
           </TabsContent>
 
           <TabsContent value="blacklist" className="space-y-4">
@@ -239,11 +246,15 @@ export function AccessControlPanel({
                 onChange={(e) => setNewBlacklistPattern(e.target.value)}
               />
               <Button onClick={() => handleAddRule('blacklist')}>
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="size-4 mr-2" />
                 Dodaj
               </Button>
             </div>
-            <RuleList rules={accessControl.blacklist} type="blacklist" />
+            <RuleList
+              rules={accessControl.blacklist}
+              type="blacklist"
+              onDeleteRule={handleDeleteRule}
+            />
           </TabsContent>
         </Tabs>
 

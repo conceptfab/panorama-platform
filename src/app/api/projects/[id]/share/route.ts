@@ -23,8 +23,10 @@ type AuthResult =
   | { ok: true; project: Project };
 
 async function authorize(id: string): Promise<AuthResult> {
-  const session = await requireAdminOrEditor();
-  const project = await getProjectById(id);
+  const [session, project] = await Promise.all([
+    requireAdminOrEditor(),
+    getProjectById(id),
+  ]);
   if (!project) {
     return {
       ok: false,

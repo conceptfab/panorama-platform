@@ -48,10 +48,10 @@ export function HotspotEditor({
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<unknown>(null);
   const currentPanoramaRef = useRef<unknown>(null);
+  const scriptsLoadedRef = useRef(false);
 
-  const [config, setConfig] = useState<ProjectConfig>(initialConfig);
+  const [config, setConfig] = useState<ProjectConfig>(() => initialConfig);
   const [threeLoaded, setThreeLoaded] = useState(false);
-  const [scriptsLoaded, setScriptsLoaded] = useState(false);
   const [currentPanoramaIndex, setCurrentPanoramaIndex] = useState(0);
   const [selectedHotspotId, setSelectedHotspotId] = useState<string | null>(
     null
@@ -482,13 +482,6 @@ export function HotspotEditor({
     loadPanorama(0);
   }, [loadPanorama, createMarkerTexture]);
 
-  useEffect(() => {
-    if (scriptsLoaded) {
-      const timer = setTimeout(initViewer, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [scriptsLoaded, initViewer]);
-
   // Po zmianie config (dodanie/usunięcie hotspota) odśwież znaczniki na panoramie
   useEffect(() => {
     const viewer = viewerRef.current as {
@@ -714,7 +707,10 @@ export function HotspotEditor({
         <Script
           src="/panolens/panolens.min.js"
           strategy="afterInteractive"
-          onLoad={() => setScriptsLoaded(true)}
+          onLoad={() => {
+            scriptsLoadedRef.current = true;
+            setTimeout(initViewer, 100);
+          }}
         />
       )}
 
@@ -731,8 +727,8 @@ export function HotspotEditor({
           {isLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/50 pointer-events-none">
               <div className="flex items-center gap-3 bg-black/70 text-white px-4 py-2 rounded-lg">
-                <Loader2 className="h-5 w-5 animate-spin" />
-                <span>Ładowanie panoramy...</span>
+                <Loader2 className="size-5 animate-spin" />
+                <span>Ładowanie panoramy…</span>
               </div>
             </div>
           )}
@@ -742,7 +738,7 @@ export function HotspotEditor({
             <div className="flex items-center gap-3">
               <Link href={`/admin/projects/${projectId}`}>
                 <Button variant="secondary" size="xs" className="h-7 text-[10px] px-2">
-                  <ArrowLeft className="h-3 w-3 mr-1" />
+                  <ArrowLeft className="size-3 mr-1" />
                   Powrót
                 </Button>
               </Link>
@@ -753,32 +749,32 @@ export function HotspotEditor({
               <Button
                 variant="secondary"
                 size="icon-xs"
-                className={`h-7 w-7 ${autoRotate
+                className={`size-7 ${autoRotate
                     ? 'bg-primary text-primary-foreground hover:bg-primary/90'
                     : ''
                   }`}
                 onClick={toggleAutoRotate}
                 title="Auto-rotacja"
               >
-                <RotateCw className="h-3.5 w-3.5" />
+                <RotateCw className="size-3.5" />
               </Button>
               <Button
                 variant="secondary"
                 size="icon-xs"
-                className="h-7 w-7"
+                className="size-7"
                 onClick={takeScreenshot}
                 title="Screenshot"
               >
-                <Camera className="h-3.5 w-3.5" />
+                <Camera className="size-3.5" />
               </Button>
               <Button
                 variant="secondary"
                 size="icon-xs"
-                className="h-7 w-7"
+                className="size-7"
                 onClick={toggleFullscreen}
                 title="Pełny ekran"
               >
-                <Maximize className="h-3.5 w-3.5" />
+                <Maximize className="size-3.5" />
               </Button>
             </div>
           </div>
@@ -789,8 +785,8 @@ export function HotspotEditor({
               <span className="font-mono text-[10px]">
                 {clickedPosition.x}, {clickedPosition.y}, {clickedPosition.z}
               </span>
-              <Button variant="ghost" size="icon-xs" className="h-5 w-5" onClick={copyCoordinates}>
-                <Copy className="h-3 w-3" />
+              <Button variant="ghost" size="icon-xs" className="size-5" onClick={copyCoordinates}>
+                <Copy className="size-3" />
               </Button>
             </div>
           )}
@@ -862,12 +858,12 @@ export function HotspotEditor({
                 >
                   {isAddingMode ? (
                     <>
-                      <Copy className="h-3.5 w-3.5 mr-1.5" />
+                      <Copy className="size-3.5 mr-1.5" />
                       Anuluj
                     </>
                   ) : (
                     <>
-                      <Plus className="h-3.5 w-3.5 mr-1.5" />
+                      <Plus className="size-3.5 mr-1.5" />
                       Wybierz pozycję
                     </>
                   )}
@@ -879,7 +875,7 @@ export function HotspotEditor({
                       Poz: <span className="font-mono">{clickedPosition.x},{clickedPosition.y},{clickedPosition.z}</span>
                     </p>
                     <Button className="w-full h-8 text-xs" onClick={handleAddHotspot} size="sm">
-                      <Plus className="h-3.5 w-3.5 mr-1.5" />
+                      <Plus className="size-3.5 mr-1.5" />
                       Dodaj tutaj
                     </Button>
                   </div>
@@ -907,9 +903,17 @@ export function HotspotEditor({
                     className={`p-2.5 rounded-md border cursor-pointer transition-colors ${selectedHotspotId === hotspot.id
                         ? 'border-primary bg-primary/5'
                         : 'hover:bg-muted/50'
-                      }`}
-                    onClick={() => setSelectedHotspotId(hotspot.id)}
-                  >
+	                      }`}
+	                    onClick={() => setSelectedHotspotId(hotspot.id)}
+	                    onKeyDown={(event) => {
+	                      if (event.key === 'Enter' || event.key === ' ') {
+	                        event.preventDefault();
+	                        setSelectedHotspotId(hotspot.id);
+	                      }
+	                    }}
+	                    role="button"
+	                    tabIndex={0}
+	                  >
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-medium truncate">
                         {hotspot.title}
@@ -917,13 +921,13 @@ export function HotspotEditor({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-5 w-5"
+                        className="size-5"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleDeleteHotspot(hotspot.id);
                         }}
                       >
-                        <Trash2 className="h-3 w-3" />
+                        <Trash2 className="size-3" />
                       </Button>
                     </div>
                     <p className="text-[10px] text-muted-foreground leading-none">
@@ -1101,9 +1105,9 @@ export function HotspotEditor({
           <div className="p-3.5 border-t bg-white dark:bg-zinc-950">
             <Button className="w-full h-10 text-xs" onClick={handleSave} disabled={isSaving} size="sm">
               {isSaving ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="size-4 mr-2 animate-spin" />
               ) : (
-                <Save className="h-4 w-4 mr-2" />
+                <Save className="size-4 mr-2" />
               )}
               Zapisz zmiany
             </Button>
