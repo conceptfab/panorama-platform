@@ -27,6 +27,10 @@ interface PanoViewerProps {
   basePath: string;
   isAdmin?: boolean;
   projectId?: string;
+  /** Tryb publiczny (link współdzielenia): ukrywa powrót do galerii. */
+  publicMode?: boolean;
+  /** Gdy ustawiony, statystyki idą na /api/p/<token>/stats zamiast /api/stats. */
+  shareToken?: string;
 }
 
 export function PanoViewer({
@@ -34,7 +38,11 @@ export function PanoViewer({
   basePath,
   isAdmin,
   projectId,
+  publicMode,
+  shareToken,
 }: PanoViewerProps) {
+  const statsEndpoint = shareToken ? `/api/p/${shareToken}/stats` : '/api/stats';
+
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<unknown>(null);
   const panoramasRef = useRef<unknown[]>([]);
@@ -321,7 +329,7 @@ export function PanoViewer({
   useEffect(() => {
     if (!projectId) return;
     viewStartTimeRef.current = Date.now();
-    fetch('/api/stats', {
+    fetch(statsEndpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -338,7 +346,7 @@ export function PanoViewer({
       const start = viewStartTimeRef.current;
       if (start != null) {
         const durationSeconds = Math.round((Date.now() - start) / 1000);
-        fetch('/api/stats', {
+        fetch(statsEndpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -348,7 +356,7 @@ export function PanoViewer({
         }).catch(() => {});
       }
     };
-  }, [projectId, config.projectName]);
+  }, [projectId, config.projectName, statsEndpoint]);
 
   const handleToggleAutoRotate = useCallback(() => {
     const viewer = viewerRef.current as {
@@ -504,7 +512,7 @@ export function PanoViewer({
           a.click();
 
           if (projectId) {
-            fetch('/api/stats', {
+            fetch(statsEndpoint, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -524,7 +532,7 @@ export function PanoViewer({
         }
       });
     });
-  }, [config.projectName, projectId]);
+  }, [config.projectName, projectId, statsEndpoint]);
 
   const handleGenerateThumbnail = useCallback(async () => {
     if (!projectId || !isAdmin) return;
@@ -661,19 +669,21 @@ export function PanoViewer({
           className="w-full h-full"
         />
 
-        <Link
-          href="/gallery"
-          className="absolute top-6 left-6 z-40"
-          title="Powrót do galerii"
-        >
-          <Button
-            variant="secondary"
-            size="icon"
-            className="bg-black/50 hover:bg-black/70 text-white border-0 h-10 w-10"
+        {!publicMode && (
+          <Link
+            href="/gallery"
+            className="absolute top-6 left-6 z-40"
+            title="Powrót do galerii"
           >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
+            <Button
+              variant="secondary"
+              size="icon"
+              className="bg-black/50 hover:bg-black/70 text-white border-0 h-10 w-10"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          </Link>
+        )}
 
         {isLoading && (
           <SplashScreen
